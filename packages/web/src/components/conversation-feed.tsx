@@ -406,6 +406,44 @@ function ToolUseBubble({ event, wasApproved }: { event: FeedEvent; wasApproved?:
   );
 }
 
+function ToolCallGroup({ events, approvedToolUses }: {
+  events: FeedEvent[];
+  approvedToolUses: Set<string>;
+}) {
+  const [groupExpanded, setGroupExpanded] = useState(false);
+  const hiddenCount = events.length - 1;
+  const lastEvent = events[events.length - 1];
+
+  if (events.length === 1) {
+    return <ToolUseBubble event={events[0]} wasApproved={approvedToolUses.has(events[0].id)} />;
+  }
+
+  return (
+    <div>
+      {groupExpanded && (
+        <div className="space-y-0.5">
+          {events.slice(0, -1).map((event) => (
+            <ToolUseBubble key={event.id} event={event} wasApproved={approvedToolUses.has(event.id)} />
+          ))}
+        </div>
+      )}
+      <div
+        className="ml-6 flex items-center gap-1.5 cursor-pointer hover:bg-zinc-50 rounded-md px-2 py-1 -mx-2 transition-colors"
+        onClick={() => setGroupExpanded(!groupExpanded)}
+      >
+        <ChevronRight className={cn(
+          "h-3 w-3 text-muted-foreground shrink-0 transition-transform",
+          groupExpanded && "rotate-90"
+        )} />
+        <span className="text-xs text-muted-foreground">
+          {groupExpanded ? "Hide" : `+${hiddenCount} more tool call${hiddenCount > 1 ? "s" : ""}`}
+        </span>
+      </div>
+      <ToolUseBubble event={lastEvent} wasApproved={approvedToolUses.has(lastEvent.id)} />
+    </div>
+  );
+}
+
 function SessionEvent({ event }: { event: FeedEvent }) {
   const isStart = event.type === "started";
   const isFailed = event.type === "failed";
@@ -581,19 +619,56 @@ export function ConversationFeed({ events, developerName, runStatus }: {
   const isLive = runStatus === "active" || runStatus === "stale";
   const lastEvent = feedEvents[feedEvents.length - 1];
 
+  // Group consecutive tool_use events together
+  const groupedItems: Array<
+    | { kind: "event"; event: FeedEvent }
+    | { kind: "tool_group"; events: FeedEvent[] }
+  > = [];
+
+  let currentToolGroup: FeedEvent[] = [];
+
+  const flushToolGroup = () => {
+    if (currentToolGroup.length > 0) {
+      groupedItems.push({ kind: "tool_group", events: [...currentToolGroup] });
+      currentToolGroup = [];
+    }
+  };
+
+  for (const event of feedEvents) {
+    if (event.type === "tool_use") {
+      currentToolGroup.push(event);
+    } else if (event.type === "permission_request" && approvedPermissions.has(event.id)) {
+      // Approved permission requests are hidden — don't break the tool group
+      continue;
+    } else {
+      flushToolGroup();
+      groupedItems.push({ kind: "event", event });
+    }
+  }
+  flushToolGroup();
+
   return (
     <div
       ref={feedRef}
       className="space-y-4 max-h-[70vh] overflow-y-auto px-1 py-2"
     >
-      {feedEvents.map((event) => {
+      {groupedItems.map((item) => {
+        if (item.kind === "tool_group") {
+          const groupKey = item.events.map((e) => e.id).join("-");
+          return (
+            <ToolCallGroup
+              key={groupKey}
+              events={item.events}
+              approvedToolUses={approvedToolUses}
+            />
+          );
+        }
+        const event = item.event;
         switch (event.type) {
           case "prompt":
             return <PromptBubble key={event.id} event={event} developerName={developerName} />;
           case "response":
             return <ResponseBubble key={event.id} event={event} />;
-          case "tool_use":
-            return <ToolUseBubble key={event.id} event={event} wasApproved={approvedToolUses.has(event.id)} />;
           case "permission_request":
             if (approvedPermissions.has(event.id)) return null;
             return <PermissionRequestBubble key={event.id} event={event} />;
