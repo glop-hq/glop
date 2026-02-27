@@ -366,9 +366,9 @@ function ToolUseBubble({ event, wasApproved }: { event: FeedEvent; wasApproved?:
   const summary = getToolSummary(toolName, toolInput, event.actionLabel);
 
   return (
-    <div className="ml-6">
+    <div className="ml-6 min-w-0">
       <div
-        className="flex gap-2 items-center cursor-pointer hover:bg-zinc-50 rounded-md px-2 py-1.5 -mx-2 transition-colors"
+        className="flex gap-2 items-center cursor-pointer hover:bg-zinc-50 rounded-md px-2 py-1.5 -mx-2 transition-colors min-w-0"
         onClick={() => setExpanded(!expanded)}
       >
         <div className={cn(
@@ -377,8 +377,8 @@ function ToolUseBubble({ event, wasApproved }: { event: FeedEvent; wasApproved?:
         )}>
           {icon}
         </div>
-        <span className="text-xs font-mono font-medium text-zinc-500">{toolName}</span>
-        <span className="text-xs text-muted-foreground truncate">{summary}</span>
+        <span className="text-xs font-mono font-medium text-zinc-500 shrink-0">{toolName}</span>
+        <span className="text-xs text-muted-foreground truncate min-w-0">{summary}</span>
         {wasApproved && (
           <span className="flex items-center gap-0.5 text-xs text-green-600 shrink-0">
             <ShieldCheck className="h-3 w-3" />
@@ -650,7 +650,7 @@ export function ConversationFeed({ events, developerName, runStatus }: {
   return (
     <div
       ref={feedRef}
-      className="space-y-4 max-h-[70vh] overflow-y-auto px-1 py-2"
+      className="space-y-4 max-h-[70vh] overflow-y-auto overflow-x-hidden px-1 py-2"
     >
       {groupedItems.map((item) => {
         if (item.kind === "tool_group") {

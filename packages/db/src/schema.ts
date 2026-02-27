@@ -18,6 +18,7 @@ export const runs = sqliteTable(
     current_action: text("current_action"),
     last_action_label: text("last_action_label"),
     file_count: integer("file_count").notNull().default(0),
+    files_touched_json: text("files_touched_json").notNull().default("[]"),
     started_at: text("started_at").notNull(),
     last_heartbeat_at: text("last_heartbeat_at").notNull(),
     last_event_at: text("last_event_at").notNull(),

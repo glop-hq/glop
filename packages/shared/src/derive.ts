@@ -15,6 +15,7 @@ export interface RunPatch {
   current_action?: string | null;
   last_action_label?: string | null;
   file_count?: number;
+  files_touched_json?: string;
   last_heartbeat_at?: string;
   last_event_at?: string;
   completed_at?: string | null;
@@ -53,12 +54,11 @@ export function deriveRunPatch(
         patch.current_action = activity.action_label;
         patch.last_action_label = activity.action_label;
         if (activity.files_touched.length > 0) {
-          const existingFiles = new Set<string>();
-          // We track file count incrementally
-          patch.file_count = Math.max(
-            currentRun.file_count,
-            currentRun.file_count + activity.files_touched.length
-          );
+          const existing: string[] = JSON.parse(currentRun.files_touched_json || "[]");
+          const merged = new Set(existing);
+          for (const f of activity.files_touched) merged.add(f);
+          patch.files_touched_json = JSON.stringify([...merged]);
+          patch.file_count = merged.size;
         }
       }
       break;

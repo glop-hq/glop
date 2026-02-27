@@ -1,0 +1,1 @@
+ALTER TABLE `runs` ADD `files_touched_json` text DEFAULT '[]' NOT NULL;

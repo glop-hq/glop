@@ -124,6 +124,7 @@ export async function processHook(
       current_action: classified.action_label,
       last_action_label: classified.action_label,
       file_count: classified.files_touched.length,
+      files_touched_json: JSON.stringify(classified.files_touched),
       started_at: now,
       last_heartbeat_at: now,
       last_event_at: now,
