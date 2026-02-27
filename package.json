@@ -1,0 +1,17 @@
+{
+  "name": "glop",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @glop/web dev",
+    "build": "pnpm -r build",
+    "db:generate": "pnpm --filter @glop/db generate",
+    "db:migrate": "pnpm --filter @glop/db migrate",
+    "seed": "pnpm --filter @glop/web seed"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": ["better-sqlite3", "esbuild", "sharp"]
+  }
+}

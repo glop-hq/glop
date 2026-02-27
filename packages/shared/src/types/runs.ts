@@ -1,0 +1,54 @@
+export type RunStatus = "active" | "blocked" | "stale" | "completed" | "failed";
+
+export type RunPhase =
+  | "editing"
+  | "validating"
+  | "waiting"
+  | "done"
+  | "failed"
+  | "unknown";
+
+export type ActivityKind =
+  | "editing"
+  | "reading"
+  | "test_run"
+  | "build_run"
+  | "check_run"
+  | "git_action"
+  | "deploy_action"
+  | "install_deps"
+  | "web_fetch"
+  | "web_search"
+  | "ask_user"
+  | "plan_mode"
+  | "todo_action"
+  | "skill_invoke"
+  | "docker_action"
+  | "waiting"
+  | "blocked"
+  | "unknown";
+
+export interface Run {
+  id: string;
+  team_id: string;
+  developer_id: string;
+  machine_id: string;
+  repo_key: string;
+  branch_name: string;
+  session_id: string | null;
+  status: RunStatus;
+  phase: RunPhase;
+  activity_kind: ActivityKind;
+  title: string | null;
+  summary: string | null;
+  current_action: string | null;
+  last_action_label: string | null;
+  file_count: number;
+  started_at: string;
+  last_heartbeat_at: string;
+  last_event_at: string;
+  completed_at: string | null;
+  event_count: number;
+  created_at: string;
+  updated_at: string;
+}
