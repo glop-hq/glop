@@ -53,7 +53,7 @@ export function RunDetailView({ runId }: { runId: string }) {
           <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Monitor className="h-3.5 w-3.5" />
-              {run.developer_id.slice(0, 8)} / {run.machine_id.slice(0, 8)}
+              {run.git_user_name || run.developer_id.slice(0, 8)}
             </span>
             <span className="flex items-center gap-1 font-mono">
               <GitBranch className="h-3.5 w-3.5" />
@@ -108,11 +108,6 @@ export function RunDetailView({ runId }: { runId: string }) {
             <CardTitle className="text-sm">
               Session Feed ({events.length} events)
             </CardTitle>
-            {isLive && (
-              <span className="text-xs text-muted-foreground">
-                Auto-updating...
-              </span>
-            )}
           </div>
         </CardHeader>
         <CardContent>

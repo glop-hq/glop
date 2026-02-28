@@ -1,8 +1,8 @@
-/** Run goes stale after 3 minutes without heartbeat */
-export const STALE_THRESHOLD_MS = 3 * 60 * 1000;
+/** Run goes stale after 5 minutes without heartbeat */
+export const STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
-/** Run auto-closes after 20 minutes without heartbeat */
-export const AUTO_CLOSE_THRESHOLD_MS = 20 * 60 * 1000;
+/** Run auto-closes after 60 minutes without heartbeat */
+export const AUTO_CLOSE_THRESHOLD_MS = 60 * 60 * 1000;
 
 /** Live board poll interval */
 export const LIVE_POLL_INTERVAL_MS = 3000;

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { desc, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
-import { applyTimeBasedStatus } from "@/lib/stale-checker";
+import { sweepStaleRuns } from "@/lib/stale-checker";
 import type { Run, ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
@@ -11,9 +11,12 @@ export async function GET() {
   try {
     const db = getDb();
 
-    // Get active + recently completed runs (completed in last 5 minutes)
+    // Persist stale/auto-close status changes so the DB stays accurate
+    await sweepStaleRuns(db);
+
     const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 
+    // Get active runs (after sweep, only truly active ones remain)
     const runs = await db
       .select()
       .from(schema.runs)
@@ -22,28 +25,29 @@ export async function GET() {
       )
       .orderBy(desc(schema.runs.last_event_at));
 
-    // Also get recently completed runs
+    // Also get recently completed runs (active within last 5 minutes)
     const recentlyCompleted = await db
       .select()
       .from(schema.runs)
       .where(
         inArray(schema.runs.status, ["completed", "failed"])
       )
-      .orderBy(desc(schema.runs.completed_at))
+      .orderBy(desc(schema.runs.last_event_at))
       .limit(5);
 
     const recentlyCompletedFiltered = recentlyCompleted.filter(
-      (r) => r.completed_at && new Date(r.completed_at).getTime() >= fiveMinutesAgoMs
+      (r) => {
+        const lastActive = r.last_event_at || r.completed_at;
+        return lastActive && new Date(lastActive).getTime() >= fiveMinutesAgoMs;
+      }
     );
 
-    const allRuns = [...runs, ...recentlyCompletedFiltered] as Run[];
-    // Sort all runs by most recently updated first
-    allRuns.sort((a, b) => {
+    const updatedRuns = [...runs, ...recentlyCompletedFiltered] as Run[];
+    updatedRuns.sort((a, b) => {
       const aTime = new Date(a.last_event_at || a.started_at).getTime();
       const bTime = new Date(b.last_event_at || b.started_at).getTime();
       return bTime - aTime;
     });
-    const updatedRuns = applyTimeBasedStatus(allRuns);
 
     // Get artifacts for all runs
     const runIds = updatedRuns.map((r) => r.id);
