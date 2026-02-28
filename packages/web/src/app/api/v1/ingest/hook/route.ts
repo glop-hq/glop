@@ -17,7 +17,7 @@ function extractRepoKey(cwd: string | undefined): string {
 function extractBranch(payload: Record<string, unknown>): string {
   // Hook payload may include branch info
   if (typeof payload.branch === "string") return payload.branch;
-  return "main";
+  return "noname";
 }
 
 export async function POST(request: NextRequest) {
@@ -60,7 +60,10 @@ export async function POST(request: NextRequest) {
       developer_id: auth.developer_id,
       developer_name: auth.developer_name,
       machine_id: machineId,
-      repo_key: extractRepoKey(body.cwd),
+      repo_key:
+        typeof body.repo_key === "string"
+          ? body.repo_key
+          : extractRepoKey(body.cwd),
       branch_name: extractBranch(body),
       session_id: sessionId,
     };

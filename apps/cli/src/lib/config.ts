@@ -47,3 +47,13 @@ export function saveConfig(config: GlopConfig): void {
   ensureConfigDir();
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 }
+
+declare const __DEFAULT_SERVER_URL__: string;
+
+export function getServerUrl(): string {
+  return (
+    process.env.GLOP_SERVER_URL ||
+    loadConfig()?.server_url ||
+    __DEFAULT_SERVER_URL__
+  );
+}

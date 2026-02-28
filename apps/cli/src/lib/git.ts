@@ -42,6 +42,6 @@ export function getBranch(): string {
       stdio: ["pipe", "pipe", "pipe"],
     }).trim();
   } catch {
-    return "main";
+    return "noname";
   }
 }

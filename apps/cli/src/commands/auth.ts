@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { saveConfig, getMachineId } from "../lib/config.js";
+import { saveConfig, getMachineId, getServerUrl } from "../lib/config.js";
 import readline from "readline";
 
 function prompt(question: string): Promise<string> {
@@ -21,7 +21,7 @@ export const authCommand = new Command("auth")
   .option("-n, --name <name>", "Developer name")
   .action(async (opts) => {
     const serverUrl =
-      opts.server || (await prompt("Server URL: "));
+      opts.server || getServerUrl();
     const developerName =
       opts.name || (await prompt("Your name: "));
 

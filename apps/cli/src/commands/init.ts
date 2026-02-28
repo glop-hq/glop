@@ -4,7 +4,7 @@ import { getRepoRoot } from "../lib/git.js";
 import fs from "fs";
 import path from "path";
 
-export const setupCommand = new Command("setup")
+export const initCommand = new Command("init")
   .description("Install Claude Code hooks in the current repo")
   .action(async () => {
     const config = loadConfig();
@@ -15,11 +15,11 @@ export const setupCommand = new Command("setup")
 
     const repoRoot = getRepoRoot();
     if (!repoRoot) {
-      console.error("Not in a git repository.");
-      process.exit(1);
+      console.warn("Warning: not in a git repository. Repo and branch tracking will be limited.");
     }
 
-    const claudeDir = path.join(repoRoot, ".claude");
+    const baseDir = repoRoot || process.cwd();
+    const claudeDir = path.join(baseDir, ".claude");
     const settingsFile = path.join(claudeDir, "settings.json");
 
     // Ensure .claude directory exists
@@ -39,11 +39,9 @@ export const setupCommand = new Command("setup")
 
     // Inline the API key directly — Claude Code hooks run as shell commands
     // and don't have access to .claude/.env
-    const hookCommand = `curl -s -X POST ${config.server_url}/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer ${config.api_key}' -d @-`;
-
     const hookHandler = {
       type: "command",
-      command: hookCommand,
+      command: "glop __hook",
     };
 
     const hookGroup = {

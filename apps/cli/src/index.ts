@@ -2,7 +2,9 @@
 
 import { Command } from "commander";
 import { authCommand } from "./commands/auth.js";
-import { setupCommand } from "./commands/setup.js";
+import { deactivateCommand } from "./commands/deactivate.js";
+import { hookCommand } from "./commands/hook.js";
+import { initCommand } from "./commands/init.js";
 import { statusCommand } from "./commands/status.js";
 
 const program = new Command()
@@ -11,7 +13,9 @@ const program = new Command()
   .version("0.1.0");
 
 program.addCommand(authCommand);
-program.addCommand(setupCommand);
+program.addCommand(deactivateCommand);
+program.addCommand(hookCommand, { hidden: true });
+program.addCommand(initCommand);
 program.addCommand(statusCommand);
 
 program.parse();
