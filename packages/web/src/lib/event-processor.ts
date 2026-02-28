@@ -101,7 +101,14 @@ export async function processHook(
         )
       )
       .limit(1);
-    existingRun = identityRuns[0] || null;
+    const candidate = identityRuns[0] || null;
+    // Only reuse if session IDs match (or if the incoming event has no session_id)
+    if (candidate && ctx.session_id && candidate.session_id && candidate.session_id !== ctx.session_id) {
+      // Different session — don't merge into this run
+      existingRun = null;
+    } else {
+      existingRun = candidate;
+    }
   }
 
   const needsNewRun = shouldCreateNewRun(existingRun as Run | null, matchedBySessionId);
