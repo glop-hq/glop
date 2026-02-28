@@ -41,7 +41,7 @@ export const hookCommand = new Command("__hook")
         if (res.ok) {
           console.log(`glop: connected to ${config.server_url}`);
         } else if (res.status === 401) {
-          console.log("glop: auth failed — run glop auth to re-authenticate");
+          console.log("glop: API key expired or invalid — run `glop auth` to re-authenticate");
         } else {
           console.log(`glop: server returned HTTP ${res.status}`);
         }

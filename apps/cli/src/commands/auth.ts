@@ -69,6 +69,7 @@ export const authCommand = new Command("auth")
       console.log(`  Server:    ${baseUrl}`);
       console.log(`  Machine:   ${machineId.slice(0, 8)}...`);
       console.log(`\nAPI key saved to ~/.glop/config.json`);
+      console.log(`\n→ Run \`glop init\` in a repo to start streaming sessions.`);
     } catch (err) {
       console.error(
         `Failed to connect to ${baseUrl}:`,

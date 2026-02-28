@@ -72,13 +72,13 @@ async function seed() {
 
   // Events for run 1
   const run1Events = [
-    { type: "run.started", at: ago(25), payload: { action_label: "Started" } },
-    { type: "run.heartbeat", at: ago(20), payload: { tool_name: "Read", action_label: "Reading package.json", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(15), payload: { tool_name: "Glob", action_label: "Searching for auth files", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(10), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(5), payload: { tool_name: "Write", action_label: "Creating useAuth.ts", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(2), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
-    { type: "run.heartbeat", at: ago(0.5), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
+    { type: "run.started" as const, at: ago(25), payload: { action_label: "Started" } },
+    { type: "run.heartbeat" as const, at: ago(20), payload: { tool_name: "Read", action_label: "Reading package.json", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(15), payload: { tool_name: "Glob", action_label: "Searching for auth files", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(10), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(5), payload: { tool_name: "Write", action_label: "Creating useAuth.ts", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(2), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
+    { type: "run.heartbeat" as const, at: ago(0.5), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
   ];
 
   for (const evt of run1Events) {
@@ -121,10 +121,10 @@ async function seed() {
   });
 
   const run2Events = [
-    { type: "run.started", at: ago(12), payload: { action_label: "Started" } },
-    { type: "run.heartbeat", at: ago(8), payload: { tool_name: "Read", action_label: "Reading rate-limiter.ts", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(5), payload: { tool_name: "Edit", action_label: "Editing rate-limiter.ts", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(1), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
+    { type: "run.started" as const, at: ago(12), payload: { action_label: "Started" } },
+    { type: "run.heartbeat" as const, at: ago(8), payload: { tool_name: "Read", action_label: "Reading rate-limiter.ts", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(5), payload: { tool_name: "Edit", action_label: "Editing rate-limiter.ts", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(1), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
   ];
 
   for (const evt of run2Events) {

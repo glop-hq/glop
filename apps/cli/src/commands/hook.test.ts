@@ -123,7 +123,7 @@ describe("__hook command", () => {
     );
 
     expect(console.log).toHaveBeenCalledWith(
-      "glop: auth failed — run glop auth to re-authenticate"
+      "glop: API key expired or invalid — run `glop auth` to re-authenticate"
     );
   });
 

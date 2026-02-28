@@ -3,6 +3,7 @@
 import { Command } from "commander";
 import { authCommand } from "./commands/auth.js";
 import { deactivateCommand } from "./commands/deactivate.js";
+import { doctorCommand } from "./commands/doctor.js";
 import { hookCommand } from "./commands/hook.js";
 import { initCommand } from "./commands/init.js";
 import { statusCommand } from "./commands/status.js";
@@ -14,6 +15,7 @@ const program = new Command()
 
 program.addCommand(authCommand);
 program.addCommand(deactivateCommand);
+program.addCommand(doctorCommand);
 program.addCommand(hookCommand, { hidden: true });
 program.addCommand(initCommand);
 program.addCommand(statusCommand);
