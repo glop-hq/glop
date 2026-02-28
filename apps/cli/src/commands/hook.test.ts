@@ -7,10 +7,12 @@ vi.mock("../lib/config.js", () => ({
 vi.mock("../lib/git.js", () => ({
   getRepoKey: vi.fn(),
   getBranch: vi.fn(),
+  getGitUserName: vi.fn(),
+  getGitUserEmail: vi.fn(),
 }));
 
 const { loadConfig } = await import("../lib/config.js");
-const { getRepoKey, getBranch } = await import("../lib/git.js");
+const { getRepoKey, getBranch, getGitUserName, getGitUserEmail } = await import("../lib/git.js");
 const { hookCommand } = await import("./hook.js");
 
 function withMockStdin(data: string, fn: () => Promise<void>) {

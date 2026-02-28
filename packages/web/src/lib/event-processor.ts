@@ -21,6 +21,8 @@ export interface HookContext {
   repo_key: string;
   branch_name: string;
   session_id?: string;
+  git_user_name: string | null;
+  git_user_email: string | null;
 }
 
 export interface ProcessedResult {
@@ -117,6 +119,8 @@ export async function processHook(
       repo_key: ctx.repo_key,
       branch_name: ctx.branch_name,
       session_id: ctx.session_id || null,
+      git_user_name: ctx.git_user_name,
+      git_user_email: ctx.git_user_email,
       status: "active",
       phase: classified.phase === "done" ? "unknown" : classified.phase,
       activity_kind: classified.activity_kind,

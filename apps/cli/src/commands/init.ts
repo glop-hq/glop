@@ -79,11 +79,5 @@ export const initCommand = new Command("init")
 
     fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
 
-    console.log(hadHooks ? "Hooks already installed, updating." : "Hooks installed successfully!");
-    console.log(`  Settings: ${settingsFile}`);
-    console.log(`  Hooks: UserPromptSubmit, PostToolUse, PermissionRequest, Stop, SessionStart, SessionEnd`);
-    console.log(`  Server: ${config.server_url}`);
-    console.log(
-      `\nClaude Code will now stream full session activity to your glop dashboard.`
-    );
+    console.log(`${hadHooks ? "✓ glop updated" : "✓ glop connected"} — sessions will appear at ${config.server_url}/live`);
   });

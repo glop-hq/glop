@@ -5,7 +5,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }
@@ -15,7 +15,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }
@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }
@@ -45,7 +45,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }
@@ -55,7 +55,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s -X POST http://localhost:3000/api/v1/ingest/hook -H 'Content-Type: application/json' -H 'Authorization: Bearer glop_682fc428078ddbe468741879bd3f15f2fd0a497cd7aaabbe' -d @-"
+            "command": "glop __hook"
           }
         ]
       }

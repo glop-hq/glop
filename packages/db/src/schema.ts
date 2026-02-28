@@ -87,6 +87,8 @@ export const runs = pgTable(
     status: runStatusEnum("status").notNull().default("active"),
     phase: runPhaseEnum("phase").notNull().default("unknown"),
     activity_kind: activityKindEnum("activity_kind").notNull().default("unknown"),
+    git_user_name: text("git_user_name"),
+    git_user_email: text("git_user_email"),
     title: text("title"),
     summary: text("summary"),
     current_action: text("current_action"),

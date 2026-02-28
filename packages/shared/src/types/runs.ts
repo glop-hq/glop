@@ -39,6 +39,8 @@ export interface Run {
   status: RunStatus;
   phase: RunPhase;
   activity_kind: ActivityKind;
+  git_user_name: string | null;
+  git_user_email: string | null;
   title: string | null;
   summary: string | null;
   current_action: string | null;

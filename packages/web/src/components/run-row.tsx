@@ -35,10 +35,10 @@ export function RunRow({
     >
       <td className="px-4 py-3">
         <div className="font-medium text-sm">
-          {run.title || `${run.developer_id.slice(0, 8)}`}
+          {run.git_user_name || run.title || run.developer_id.slice(0, 8)}
         </div>
         <div className="text-xs text-muted-foreground mt-0.5">
-          {run.developer_id.slice(0, 8)}
+          {run.git_user_email || run.developer_id.slice(0, 8)}
         </div>
       </td>
       <td className="px-4 py-3">

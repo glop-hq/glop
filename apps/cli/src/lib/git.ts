@@ -45,3 +45,25 @@ export function getBranch(): string {
     return "noname";
   }
 }
+
+export function getGitUserName(): string | null {
+  try {
+    return execSync("git config user.name", {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim() || null;
+  } catch {
+    return null;
+  }
+}
+
+export function getGitUserEmail(): string | null {
+  try {
+    return execSync("git config user.email", {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+    }).trim() || null;
+  } catch {
+    return null;
+  }
+}

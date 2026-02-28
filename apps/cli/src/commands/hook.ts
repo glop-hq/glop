@@ -1,6 +1,6 @@
 import { Command } from "commander";
 import { loadConfig } from "../lib/config.js";
-import { getRepoKey, getBranch } from "../lib/git.js";
+import { getRepoKey, getBranch, getGitUserName, getGitUserEmail } from "../lib/git.js";
 
 export const hookCommand = new Command("__hook")
   .description("internal")
@@ -24,6 +24,8 @@ export const hookCommand = new Command("__hook")
     payload.repo_key = getRepoKey() || payload.cwd || "unknown";
     payload.branch = getBranch();
     payload.machine_id = config.machine_id;
+    payload.git_user_name = getGitUserName();
+    payload.git_user_email = getGitUserEmail();
 
     try {
       const res = await fetch(`${config.server_url}/api/v1/ingest/hook`, {

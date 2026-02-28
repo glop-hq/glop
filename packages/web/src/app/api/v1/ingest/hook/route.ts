@@ -66,6 +66,8 @@ export async function POST(request: NextRequest) {
           : extractRepoKey(body.cwd),
       branch_name: extractBranch(body),
       session_id: sessionId,
+      git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
+      git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
     };
 
     const result = await processHook(db, hookType, body, ctx);
