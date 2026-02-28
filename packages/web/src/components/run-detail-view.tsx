@@ -9,7 +9,7 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch, Monitor, FileCode } from "lucide-react";
+import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, Hash, FolderGit2 } from "lucide-react";
 import Link from "next/link";
 
 export function RunDetailView({ runId }: { runId: string }) {
@@ -55,14 +55,28 @@ export function RunDetailView({ runId }: { runId: string }) {
               <Monitor className="h-3.5 w-3.5" />
               {run.git_user_name || run.developer_id.slice(0, 8)}
             </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              <RelativeTime date={run.started_at} />
+            </span>
+            <span className="flex items-center gap-1 font-mono">
+              <FolderGit2 className="h-3.5 w-3.5" />
+              {run.repo_key}
+            </span>
             <span className="flex items-center gap-1 font-mono">
               <GitBranch className="h-3.5 w-3.5" />
-              {run.repo_key} : {run.branch_name}
+              {run.branch_name}
             </span>
             <span className="flex items-center gap-1">
               <FileCode className="h-3.5 w-3.5" />
               {run.file_count} files
             </span>
+            {run.session_id && (
+              <span className="flex items-center gap-1 font-mono" title={run.session_id}>
+                <Hash className="h-3.5 w-3.5" />
+                {run.session_id.slice(0, 8)}
+              </span>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-3">
