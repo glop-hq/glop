@@ -1,8 +1,16 @@
-import { migrate } from "drizzle-orm/better-sqlite3/migrator";
-import { createDb } from "./index.js";
+import { migrate } from "drizzle-orm/node-postgres/migrator";
+import { drizzle } from "drizzle-orm/node-postgres";
+import pg from "pg";
 
-const dbPath = process.env.DATABASE_PATH || "../../glop.db";
-const db = createDb(dbPath);
+const pool = new pg.Pool({
+  connectionString:
+    process.env.DATABASE_URL ||
+    "postgresql://localhost:5432/glop",
+});
 
-migrate(db, { migrationsFolder: "./drizzle" });
+const db = drizzle(pool);
+
+await migrate(db, { migrationsFolder: "./drizzle" });
 console.log("Migrations complete");
+
+await pool.end();

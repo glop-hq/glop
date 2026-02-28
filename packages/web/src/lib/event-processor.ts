@@ -124,7 +124,7 @@ export async function processHook(
       current_action: classified.action_label,
       last_action_label: classified.action_label,
       file_count: classified.files_touched.length,
-      files_touched_json: JSON.stringify(classified.files_touched),
+      files_touched: classified.files_touched,
       started_at: now,
       last_heartbeat_at: now,
       last_event_at: now,
@@ -173,7 +173,7 @@ export async function processHook(
     machine_id: ctx.machine_id,
     repo_key: ctx.repo_key,
     branch_name: ctx.branch_name,
-    payload: JSON.stringify({
+    payload: {
       hook_type: hookType,
       tool_name: rawPayload.tool_name,
       tool_input: rawPayload.tool_input,
@@ -183,7 +183,7 @@ export async function processHook(
       files_touched: classified.files_touched,
       content_type: classified.content_type,
       content: classified.content,
-    }),
+    },
   });
 
   return { run_id: runId, event_id: eventId };

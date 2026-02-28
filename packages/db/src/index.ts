@@ -1,10 +1,10 @@
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
+import type { Pool } from "pg";
 
 export { schema };
 export type DbClient = ReturnType<typeof drizzle>;
 
-export function createDb(sqliteDb: unknown) {
-  const db = drizzle(sqliteDb as never, { schema });
-  return db;
+export function createDb(pool: Pool) {
+  return drizzle(pool, { schema });
 }

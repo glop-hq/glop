@@ -44,7 +44,7 @@ export interface Run {
   current_action: string | null;
   last_action_label: string | null;
   file_count: number;
-  files_touched_json: string;
+  files_touched: string[];
   started_at: string;
   last_heartbeat_at: string;
   last_event_at: string;

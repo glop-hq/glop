@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, inArray, eq, gte } from "drizzle-orm";
+import { desc, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { applyTimeBasedStatus } from "@/lib/stale-checker";
@@ -12,9 +12,7 @@ export async function GET() {
     const db = getDb();
 
     // Get active + recently completed runs (completed in last 5 minutes)
-    const fiveMinutesAgo = new Date(
-      Date.now() - 5 * 60 * 1000
-    ).toISOString();
+    const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 
     const runs = await db
       .select()
@@ -35,15 +33,15 @@ export async function GET() {
       .limit(5);
 
     const recentlyCompletedFiltered = recentlyCompleted.filter(
-      (r) => r.completed_at && r.completed_at >= fiveMinutesAgo
+      (r) => r.completed_at && new Date(r.completed_at).getTime() >= fiveMinutesAgoMs
     );
 
     const allRuns = [...runs, ...recentlyCompletedFiltered] as Run[];
     // Sort all runs by most recently updated first
     allRuns.sort((a, b) => {
-      const aTime = a.last_event_at || a.started_at || "";
-      const bTime = b.last_event_at || b.started_at || "";
-      return bTime.localeCompare(aTime);
+      const aTime = new Date(a.last_event_at || a.started_at).getTime();
+      const bTime = new Date(b.last_event_at || b.started_at).getTime();
+      return bTime - aTime;
     });
     const updatedRuns = applyTimeBasedStatus(allRuns);
 
@@ -57,10 +55,7 @@ export async function GET() {
         .from(schema.artifacts)
         .where(inArray(schema.artifacts.run_id, runIds));
 
-      artifacts = rawArtifacts.map((a) => ({
-        ...a,
-        metadata: JSON.parse(a.metadata || "{}"),
-      })) as ArtifactInfo[];
+      artifacts = rawArtifacts as ArtifactInfo[];
     }
 
     // Attach artifacts to runs

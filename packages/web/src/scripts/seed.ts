@@ -1,9 +1,13 @@
-import path from "path";
+import pg from "pg";
 import { createDb, schema } from "@glop/db";
 import { createHash, randomBytes } from "crypto";
 
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "..", "..", "glop.db");
-const db = createDb(dbPath);
+const pool = new pg.Pool({
+  connectionString:
+    process.env.DATABASE_URL ||
+    "postgresql://localhost:5432/glop",
+});
+const db = createDb(pool);
 
 function id() {
   return crypto.randomUUID();
@@ -88,7 +92,7 @@ async function seed() {
       machine_id: machineIds[0],
       repo_key: "acme/frontend",
       branch_name: "feat/auth-flow",
-      payload: JSON.stringify(evt.payload),
+      payload: evt.payload,
     });
   }
 
@@ -134,7 +138,7 @@ async function seed() {
       machine_id: machineIds[1],
       repo_key: "acme/api",
       branch_name: "fix/rate-limiter",
-      payload: JSON.stringify(evt.payload),
+      payload: evt.payload,
     });
   }
 
@@ -217,7 +221,7 @@ async function seed() {
     label: "PR #42",
     external_id: "42",
     state: "merged",
-    metadata: "{}",
+    metadata: {},
     created_at: ago(95),
   });
 
@@ -229,6 +233,8 @@ async function seed() {
   devs.forEach((dev, i) => {
     console.log(`  ${dev.name}: ${apiKeys[i]}`);
   });
+
+  await pool.end();
 }
 
 seed().catch(console.error);
