@@ -84,6 +84,7 @@ export const runs = pgTable(
     repo_key: text("repo_key").notNull(),
     branch_name: text("branch_name").notNull(),
     session_id: text("session_id"),
+    slug: text("slug"),
     status: runStatusEnum("status").notNull().default("active"),
     phase: runPhaseEnum("phase").notNull().default("unknown"),
     activity_kind: activityKindEnum("activity_kind").notNull().default("unknown"),
@@ -113,6 +114,7 @@ export const runs = pgTable(
       table.branch_name
     ),
     index("runs_session_id_idx").on(table.session_id),
+    index("runs_slug_idx").on(table.slug),
   ]
 );
 

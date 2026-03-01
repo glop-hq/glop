@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 import { processHook, type HookContext } from "@/lib/event-processor";
-import path from "path";
 
 function extractRepoKey(cwd: string | undefined): string {
   if (!cwd) return "unknown";
@@ -66,6 +65,7 @@ export async function POST(request: NextRequest) {
           : extractRepoKey(body.cwd),
       branch_name: extractBranch(body),
       session_id: sessionId,
+      slug: typeof body.slug === "string" ? body.slug : undefined,
       git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
       git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
     };

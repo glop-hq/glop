@@ -15,6 +15,13 @@
       "when": 1772253994055,
       "tag": "0001_bent_the_leader",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1772300906801,
+      "tag": "0002_long_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

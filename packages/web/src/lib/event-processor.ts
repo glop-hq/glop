@@ -21,6 +21,7 @@ export interface HookContext {
   repo_key: string;
   branch_name: string;
   session_id?: string;
+  slug?: string;
   git_user_name: string | null;
   git_user_email: string | null;
 }
@@ -39,7 +40,7 @@ function hookToEventType(classified: ClassifiedHook, isNewRun: boolean): EventTy
     case "permission_request":
       return "run.permission_request";
     case "session_end":
-      return "run.completed";
+      return "run.heartbeat";
     case "session_start":
       return isNewRun ? "run.started" : "run.heartbeat";
     case "tool_use":
@@ -86,6 +87,32 @@ export async function processHook(
     }
   }
 
+  // Try slug-based matching: find a run with the same conversation slug + developer
+  if (!existingRun && ctx.slug) {
+    const slugRuns = await db
+      .select()
+      .from(schema.runs)
+      .where(
+        and(
+          eq(schema.runs.slug, ctx.slug),
+          eq(schema.runs.developer_id, ctx.developer_id)
+        )
+      )
+      .orderBy(desc(schema.runs.created_at))
+      .limit(1);
+    if (slugRuns[0]) {
+      existingRun = slugRuns[0];
+      matchedBySessionId = true; // treat as matched to skip shouldCreateNewRun
+      // Update the run's session_id to the new session
+      if (ctx.session_id && existingRun.session_id !== ctx.session_id) {
+        await db
+          .update(schema.runs)
+          .set({ session_id: ctx.session_id })
+          .where(eq(schema.runs.id, existingRun.id));
+      }
+    }
+  }
+
   // Fall back to identity tuple lookup for open runs
   if (!existingRun) {
     const identityRuns = await db
@@ -126,6 +153,7 @@ export async function processHook(
       repo_key: ctx.repo_key,
       branch_name: ctx.branch_name,
       session_id: ctx.session_id || null,
+      slug: ctx.slug || null,
       git_user_name: ctx.git_user_name,
       git_user_email: ctx.git_user_email,
       status: "active",
@@ -157,6 +185,11 @@ export async function processHook(
       if (value !== undefined) {
         updateData[key] = value;
       }
+    }
+
+    // Store slug on the run if it doesn't have one yet
+    if (ctx.slug && !existingRun.slug) {
+      updateData.slug = ctx.slug;
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -194,6 +227,8 @@ export async function processHook(
       files_touched: classified.files_touched,
       content_type: classified.content_type,
       content: classified.content,
+      // Preserve conversation slug for session linking
+      ...(rawPayload.slug ? { slug: rawPayload.slug } : {}),
     },
   });
 

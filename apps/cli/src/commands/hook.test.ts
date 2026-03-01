@@ -1,6 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { Readable } from "stream";
 
+vi.mock("fs", () => ({
+  openSync: vi.fn(),
+  readSync: vi.fn(),
+  closeSync: vi.fn(),
+}));
 vi.mock("../lib/config.js", () => ({
   loadConfig: vi.fn(),
 }));
@@ -11,6 +16,7 @@ vi.mock("../lib/git.js", () => ({
   getGitUserEmail: vi.fn(),
 }));
 
+const { openSync, readSync, closeSync } = await import("fs");
 const { loadConfig } = await import("../lib/config.js");
 const { getRepoKey, getBranch, getGitUserName, getGitUserEmail } = await import("../lib/git.js");
 const { hookCommand } = await import("./hook.js");
@@ -192,5 +198,115 @@ describe("__hook command", () => {
 
     const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
     expect(body.repo_key).toBe("/Users/test/my-project");
+  });
+
+  it("extracts slug from transcript file and includes it in payload", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(getRepoKey).mockReturnValue("acme/app");
+    vi.mocked(getBranch).mockReturnValue("main");
+    const content = '{"type":"init","slug":"woolly-scribbling-kay"}\n{"type":"message"}\n';
+    vi.mocked(openSync).mockReturnValue(42);
+    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
+      const bytes = Buffer.from(content);
+      bytes.copy(buf);
+      return bytes.length;
+    });
+    vi.mocked(closeSync).mockReturnValue(undefined);
+
+    await withMockStdin(
+      JSON.stringify({
+        hook_event_name: "SessionStart",
+        transcript_path: "/tmp/transcript.jsonl",
+      }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    expect(openSync).toHaveBeenCalledWith("/tmp/transcript.jsonl", "r");
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.slug).toBe("woolly-scribbling-kay");
+  });
+
+  it("skips slug when transcript file is missing", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(getRepoKey).mockReturnValue("acme/app");
+    vi.mocked(getBranch).mockReturnValue("main");
+    vi.mocked(openSync).mockImplementation(() => {
+      throw new Error("ENOENT");
+    });
+
+    await withMockStdin(
+      JSON.stringify({
+        hook_event_name: "PostToolUse",
+        transcript_path: "/tmp/nonexistent.jsonl",
+      }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.slug).toBeUndefined();
+  });
+
+  it("skips slug when transcript has no slug field", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(getRepoKey).mockReturnValue("acme/app");
+    vi.mocked(getBranch).mockReturnValue("main");
+    const content = '{"type":"init"}\n{"type":"message"}\n';
+    vi.mocked(openSync).mockReturnValue(42);
+    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
+      const bytes = Buffer.from(content);
+      bytes.copy(buf);
+      return bytes.length;
+    });
+    vi.mocked(closeSync).mockReturnValue(undefined);
+
+    await withMockStdin(
+      JSON.stringify({
+        hook_event_name: "PostToolUse",
+        transcript_path: "/tmp/transcript.jsonl",
+      }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.slug).toBeUndefined();
+  });
+
+  it("skips slug when no transcript_path in payload", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(getRepoKey).mockReturnValue("acme/app");
+    vi.mocked(getBranch).mockReturnValue("main");
+
+    await withMockStdin(
+      JSON.stringify({ hook_event_name: "PostToolUse" }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    expect(openSync).not.toHaveBeenCalled();
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.slug).toBeUndefined();
   });
 });
