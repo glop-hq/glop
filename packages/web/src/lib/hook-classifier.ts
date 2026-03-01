@@ -225,10 +225,15 @@ export function classifyHookPayload(
 
   // Task tool (subagent)
   if (toolName === "Task") {
+    const subagentType = typeof toolInput.subagent_type === "string" ? toolInput.subagent_type : "";
+    const description = typeof toolInput.description === "string" ? toolInput.description : "";
+    const label = subagentType && description
+      ? `${subagentType}: ${truncateStr(description, 60)}`
+      : subagentType || description || "Running subagent";
     return {
       activity_kind: "editing",
       phase: "editing",
-      action_label: "Running subagent",
+      action_label: label,
       files_touched: [],
       is_completion: false,
       is_session_start: false,

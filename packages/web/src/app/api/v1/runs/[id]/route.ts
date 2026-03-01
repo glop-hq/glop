@@ -36,20 +36,14 @@ export async function GET(
       .where(eq(schema.events.run_id, id))
       .orderBy(asc(schema.events.occurred_at));
 
-    const parsedEvents: Event[] = events.map((e) => ({
-      ...e,
-      payload: JSON.parse(e.payload || "{}"),
-    })) as Event[];
+    const parsedEvents = events as Event[];
 
     const rawArtifacts = await db
       .select()
       .from(schema.artifacts)
       .where(eq(schema.artifacts.run_id, id));
 
-    const artifacts: ArtifactInfo[] = rawArtifacts.map((a) => ({
-      ...a,
-      metadata: JSON.parse(a.metadata || "{}"),
-    })) as ArtifactInfo[];
+    const artifacts = rawArtifacts as ArtifactInfo[];
 
     return NextResponse.json({
       run,

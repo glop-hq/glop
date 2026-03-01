@@ -113,7 +113,7 @@ export function HistoryTable() {
                   onClick={() => router.push(`/runs/${run.id}`)}
                 >
                   <td className="px-4 py-3 text-sm">
-                    {run.developer_id.slice(0, 8)}
+                    {run.git_user_name || run.developer_id.slice(0, 8)}
                   </td>
                   <td className="px-4 py-3">
                     <span className="text-sm font-mono">{run.repo_key}</span>

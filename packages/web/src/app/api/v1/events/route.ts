@@ -44,6 +44,8 @@ export async function POST(request: NextRequest) {
       machine_id: machineId,
       repo_key: parsed.data.repo_key,
       branch_name: parsed.data.branch_name,
+      git_user_name: null,
+      git_user_email: null,
     };
 
     const result = await processHook(

@@ -39,12 +39,14 @@ export interface Run {
   status: RunStatus;
   phase: RunPhase;
   activity_kind: ActivityKind;
+  git_user_name: string | null;
+  git_user_email: string | null;
   title: string | null;
   summary: string | null;
   current_action: string | null;
   last_action_label: string | null;
   file_count: number;
-  files_touched_json: string;
+  files_touched: string[];
   started_at: string;
   last_heartbeat_at: string;
   last_event_at: string;

@@ -21,6 +21,9 @@ export interface HookContext {
   repo_key: string;
   branch_name: string;
   session_id?: string;
+  slug?: string;
+  git_user_name: string | null;
+  git_user_email: string | null;
 }
 
 export interface ProcessedResult {
@@ -37,7 +40,7 @@ function hookToEventType(classified: ClassifiedHook, isNewRun: boolean): EventTy
     case "permission_request":
       return "run.permission_request";
     case "session_end":
-      return "run.completed";
+      return "run.heartbeat";
     case "session_start":
       return isNewRun ? "run.started" : "run.heartbeat";
     case "tool_use":
@@ -84,6 +87,32 @@ export async function processHook(
     }
   }
 
+  // Try slug-based matching: find a run with the same conversation slug + developer
+  if (!existingRun && ctx.slug) {
+    const slugRuns = await db
+      .select()
+      .from(schema.runs)
+      .where(
+        and(
+          eq(schema.runs.slug, ctx.slug),
+          eq(schema.runs.developer_id, ctx.developer_id)
+        )
+      )
+      .orderBy(desc(schema.runs.created_at))
+      .limit(1);
+    if (slugRuns[0]) {
+      existingRun = slugRuns[0];
+      matchedBySessionId = true; // treat as matched to skip shouldCreateNewRun
+      // Update the run's session_id to the new session
+      if (ctx.session_id && existingRun.session_id !== ctx.session_id) {
+        await db
+          .update(schema.runs)
+          .set({ session_id: ctx.session_id })
+          .where(eq(schema.runs.id, existingRun.id));
+      }
+    }
+  }
+
   // Fall back to identity tuple lookup for open runs
   if (!existingRun) {
     const identityRuns = await db
@@ -99,7 +128,14 @@ export async function processHook(
         )
       )
       .limit(1);
-    existingRun = identityRuns[0] || null;
+    const candidate = identityRuns[0] || null;
+    // Only reuse if session IDs match (or if the incoming event has no session_id)
+    if (candidate && ctx.session_id && candidate.session_id && candidate.session_id !== ctx.session_id) {
+      // Different session — don't merge into this run
+      existingRun = null;
+    } else {
+      existingRun = candidate;
+    }
   }
 
   const needsNewRun = shouldCreateNewRun(existingRun as Run | null, matchedBySessionId);
@@ -117,6 +153,9 @@ export async function processHook(
       repo_key: ctx.repo_key,
       branch_name: ctx.branch_name,
       session_id: ctx.session_id || null,
+      slug: ctx.slug || null,
+      git_user_name: ctx.git_user_name,
+      git_user_email: ctx.git_user_email,
       status: "active",
       phase: classified.phase === "done" ? "unknown" : classified.phase,
       activity_kind: classified.activity_kind,
@@ -124,7 +163,7 @@ export async function processHook(
       current_action: classified.action_label,
       last_action_label: classified.action_label,
       file_count: classified.files_touched.length,
-      files_touched_json: JSON.stringify(classified.files_touched),
+      files_touched: classified.files_touched,
       started_at: now,
       last_heartbeat_at: now,
       last_event_at: now,
@@ -146,6 +185,11 @@ export async function processHook(
       if (value !== undefined) {
         updateData[key] = value;
       }
+    }
+
+    // Store slug on the run if it doesn't have one yet
+    if (ctx.slug && !existingRun.slug) {
+      updateData.slug = ctx.slug;
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -173,7 +217,7 @@ export async function processHook(
     machine_id: ctx.machine_id,
     repo_key: ctx.repo_key,
     branch_name: ctx.branch_name,
-    payload: JSON.stringify({
+    payload: {
       hook_type: hookType,
       tool_name: rawPayload.tool_name,
       tool_input: rawPayload.tool_input,
@@ -183,7 +227,9 @@ export async function processHook(
       files_touched: classified.files_touched,
       content_type: classified.content_type,
       content: classified.content,
-    }),
+      // Preserve conversation slug for session linking
+      ...(rawPayload.slug ? { slug: rawPayload.slug } : {}),
+    },
   });
 
   return { run_id: runId, event_id: eventId };

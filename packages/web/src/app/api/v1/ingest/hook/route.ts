@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 import { processHook, type HookContext } from "@/lib/event-processor";
-import path from "path";
 
 function extractRepoKey(cwd: string | undefined): string {
   if (!cwd) return "unknown";
@@ -17,7 +16,7 @@ function extractRepoKey(cwd: string | undefined): string {
 function extractBranch(payload: Record<string, unknown>): string {
   // Hook payload may include branch info
   if (typeof payload.branch === "string") return payload.branch;
-  return "main";
+  return "noname";
 }
 
 export async function POST(request: NextRequest) {
@@ -60,9 +59,15 @@ export async function POST(request: NextRequest) {
       developer_id: auth.developer_id,
       developer_name: auth.developer_name,
       machine_id: machineId,
-      repo_key: extractRepoKey(body.cwd),
+      repo_key:
+        typeof body.repo_key === "string"
+          ? body.repo_key
+          : extractRepoKey(body.cwd),
       branch_name: extractBranch(body),
       session_id: sessionId,
+      slug: typeof body.slug === "string" ? body.slug : undefined,
+      git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
+      git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
     };
 
     const result = await processHook(db, hookType, body, ctx);

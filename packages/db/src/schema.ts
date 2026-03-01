@@ -1,31 +1,108 @@
-import { sqliteTable, text, integer, index } from "drizzle-orm/sqlite-core";
+import {
+  pgTable,
+  pgEnum,
+  text,
+  integer,
+  index,
+  uuid,
+  timestamp,
+  jsonb,
+} from "drizzle-orm/pg-core";
 
-export const runs = sqliteTable(
+// ── Enums ──────────────────────────────────────────────
+
+export const runStatusEnum = pgEnum("run_status", [
+  "active",
+  "blocked",
+  "stale",
+  "completed",
+  "failed",
+]);
+
+export const runPhaseEnum = pgEnum("run_phase", [
+  "editing",
+  "validating",
+  "waiting",
+  "done",
+  "failed",
+  "unknown",
+]);
+
+export const activityKindEnum = pgEnum("activity_kind", [
+  "editing",
+  "reading",
+  "test_run",
+  "build_run",
+  "check_run",
+  "git_action",
+  "deploy_action",
+  "install_deps",
+  "web_fetch",
+  "web_search",
+  "ask_user",
+  "plan_mode",
+  "todo_action",
+  "skill_invoke",
+  "docker_action",
+  "waiting",
+  "blocked",
+  "unknown",
+]);
+
+export const eventTypeEnum = pgEnum("event_type", [
+  "run.started",
+  "run.heartbeat",
+  "run.phase_changed",
+  "run.completed",
+  "run.failed",
+  "run.prompt",
+  "run.response",
+  "run.tool_use",
+  "run.permission_request",
+  "run.title_updated",
+  "run.summary_updated",
+  "artifact.added",
+  "artifact.updated",
+]);
+
+export const artifactTypeEnum = pgEnum("artifact_type", [
+  "pr",
+  "preview",
+  "ci",
+  "commit",
+]);
+
+// ── Tables ─────────────────────────────────────────────
+
+export const runs = pgTable(
   "runs",
   {
-    id: text("id").primaryKey(),
+    id: uuid("id").primaryKey(),
     team_id: text("team_id").notNull(),
     developer_id: text("developer_id").notNull(),
     machine_id: text("machine_id").notNull(),
     repo_key: text("repo_key").notNull(),
     branch_name: text("branch_name").notNull(),
     session_id: text("session_id"),
-    status: text("status").notNull().default("active"),
-    phase: text("phase").notNull().default("unknown"),
-    activity_kind: text("activity_kind").notNull().default("unknown"),
+    slug: text("slug"),
+    status: runStatusEnum("status").notNull().default("active"),
+    phase: runPhaseEnum("phase").notNull().default("unknown"),
+    activity_kind: activityKindEnum("activity_kind").notNull().default("unknown"),
+    git_user_name: text("git_user_name"),
+    git_user_email: text("git_user_email"),
     title: text("title"),
     summary: text("summary"),
     current_action: text("current_action"),
     last_action_label: text("last_action_label"),
     file_count: integer("file_count").notNull().default(0),
-    files_touched_json: text("files_touched_json").notNull().default("[]"),
-    started_at: text("started_at").notNull(),
-    last_heartbeat_at: text("last_heartbeat_at").notNull(),
-    last_event_at: text("last_event_at").notNull(),
-    completed_at: text("completed_at"),
+    files_touched: jsonb("files_touched").$type<string[]>().notNull().default([]),
+    started_at: timestamp("started_at", { mode: "string", withTimezone: true }).notNull(),
+    last_heartbeat_at: timestamp("last_heartbeat_at", { mode: "string", withTimezone: true }).notNull(),
+    last_event_at: timestamp("last_event_at", { mode: "string", withTimezone: true }).notNull(),
+    completed_at: timestamp("completed_at", { mode: "string", withTimezone: true }),
     event_count: integer("event_count").notNull().default(0),
-    created_at: text("created_at").notNull(),
-    updated_at: text("updated_at").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
   },
   (table) => [
     index("runs_status_idx").on(table.status),
@@ -37,24 +114,25 @@ export const runs = sqliteTable(
       table.branch_name
     ),
     index("runs_session_id_idx").on(table.session_id),
+    index("runs_slug_idx").on(table.slug),
   ]
 );
 
-export const events = sqliteTable(
+export const events = pgTable(
   "events",
   {
-    id: text("id").primaryKey(),
-    event_type: text("event_type").notNull(),
-    occurred_at: text("occurred_at").notNull(),
-    received_at: text("received_at").notNull(),
-    run_id: text("run_id")
+    id: uuid("id").primaryKey(),
+    event_type: eventTypeEnum("event_type").notNull(),
+    occurred_at: timestamp("occurred_at", { mode: "string", withTimezone: true }).notNull(),
+    received_at: timestamp("received_at", { mode: "string", withTimezone: true }).notNull(),
+    run_id: uuid("run_id")
       .notNull()
       .references(() => runs.id),
     developer_id: text("developer_id").notNull(),
     machine_id: text("machine_id").notNull(),
     repo_key: text("repo_key").notNull(),
     branch_name: text("branch_name").notNull(),
-    payload: text("payload").notNull().default("{}"),
+    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
   },
   (table) => [
     index("events_run_id_idx").on(table.run_id),
@@ -62,28 +140,28 @@ export const events = sqliteTable(
   ]
 );
 
-export const artifacts = sqliteTable(
+export const artifacts = pgTable(
   "artifacts",
   {
-    id: text("id").primaryKey(),
-    run_id: text("run_id")
+    id: uuid("id").primaryKey(),
+    run_id: uuid("run_id")
       .notNull()
       .references(() => runs.id),
-    artifact_type: text("artifact_type").notNull(),
+    artifact_type: artifactTypeEnum("artifact_type").notNull(),
     url: text("url"),
     label: text("label"),
     external_id: text("external_id"),
     state: text("state"),
-    metadata: text("metadata").notNull().default("{}"),
-    created_at: text("created_at").notNull(),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
   },
   (table) => [index("artifacts_run_id_idx").on(table.run_id)]
 );
 
-export const api_keys = sqliteTable("api_keys", {
-  id: text("id").primaryKey(),
+export const api_keys = pgTable("api_keys", {
+  id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),
   developer_id: text("developer_id").notNull(),
   developer_name: text("developer_name").notNull(),
-  created_at: text("created_at").notNull(),
+  created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
 });

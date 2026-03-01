@@ -4,7 +4,7 @@ import type { RunPhase } from "@glop/shared";
 
 const phaseConfig: Record<RunPhase, { label: string; className: string }> = {
   editing: {
-    label: "Editing",
+    label: "Working",
     className: "bg-blue-100 text-blue-800 border-blue-200",
   },
   validating: {

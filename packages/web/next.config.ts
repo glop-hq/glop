@@ -1,19 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  serverExternalPackages: ["better-sqlite3"],
-  experimental: {
-    serverComponentsExternalPackages: ["better-sqlite3"],
-  },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      config.externals = config.externals || [];
-      if (Array.isArray(config.externals)) {
-        config.externals.push("better-sqlite3");
-      }
-    }
-    return config;
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

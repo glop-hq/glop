@@ -52,10 +52,7 @@ export async function GET(request: NextRequest) {
         .from(schema.artifacts)
         .where(inArray(schema.artifacts.run_id, runIds));
 
-      artifacts = rawArtifacts.map((a) => ({
-        ...a,
-        metadata: JSON.parse(a.metadata || "{}"),
-      })) as ArtifactInfo[];
+      artifacts = rawArtifacts as ArtifactInfo[];
     }
 
     const runsWithArtifacts = runs.map((run) => ({

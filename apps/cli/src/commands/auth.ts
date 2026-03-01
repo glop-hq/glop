@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { saveConfig, getMachineId } from "../lib/config.js";
+import { saveConfig, getMachineId, getServerUrl } from "../lib/config.js";
 import readline from "readline";
 
 function prompt(question: string): Promise<string> {
@@ -21,7 +21,7 @@ export const authCommand = new Command("auth")
   .option("-n, --name <name>", "Developer name")
   .action(async (opts) => {
     const serverUrl =
-      opts.server || (await prompt("Server URL: "));
+      opts.server || getServerUrl();
     const developerName =
       opts.name || (await prompt("Your name: "));
 
@@ -69,6 +69,7 @@ export const authCommand = new Command("auth")
       console.log(`  Server:    ${baseUrl}`);
       console.log(`  Machine:   ${machineId.slice(0, 8)}...`);
       console.log(`\nAPI key saved to ~/.glop/config.json`);
+      console.log(`\n→ Run \`glop init\` in a repo to start streaming sessions.`);
     } catch (err) {
       console.error(
         `Failed to connect to ${baseUrl}:`,

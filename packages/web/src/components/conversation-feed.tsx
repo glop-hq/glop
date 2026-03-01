@@ -32,6 +32,8 @@ import {
   SpellCheck,
   NotebookPen,
   ShieldCheck,
+  Clock,
+  Wrench,
 } from "lucide-react";
 
 interface FeedEvent {
@@ -282,6 +284,100 @@ function getToolSummary(toolName: string, toolInput: Record<string, unknown>, ac
   return actionLabel || toolName;
 }
 
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const secs = ms / 1000;
+  if (secs < 60) return `${secs.toFixed(1)}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = Math.round(secs % 60);
+  return `${mins}m ${remSecs}s`;
+}
+
+function SubagentDetail({ toolInput, toolResponse }: {
+  toolInput: Record<string, unknown>;
+  toolResponse?: string;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const subagentType = (toolInput.subagent_type as string) || "subagent";
+  const description = (toolInput.description as string) || "";
+
+  // Parse the tool_response JSON to extract structured data
+  let parsed: Record<string, unknown> | null = null;
+  if (toolResponse) {
+    try {
+      parsed = JSON.parse(toolResponse);
+    } catch {
+      // not JSON, ignore
+    }
+  }
+
+  const durationMs = parsed?.totalDurationMs as number | undefined;
+  const toolCount = parsed?.totalToolUseCount as number | undefined;
+
+  // Extract the text content from the subagent response
+  let responseText = "";
+  if (parsed?.content && Array.isArray(parsed.content)) {
+    const textBlock = parsed.content.find(
+      (b: Record<string, unknown>) => typeof b.text === "string"
+    ) as { text: string } | undefined;
+    if (textBlock) responseText = textBlock.text;
+  } else if (typeof parsed?.content === "string") {
+    responseText = parsed.content;
+  } else if (!parsed && toolResponse) {
+    responseText = toolResponse;
+  }
+
+  const truncateLength = 600;
+  const isTruncated = responseText.length > truncateLength;
+  const displayText = expanded ? responseText : responseText.slice(0, truncateLength);
+
+  return (
+    <div className="space-y-2">
+      {/* Header row: badge + description + stats */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
+          {subagentType}
+        </span>
+        {description && (
+          <span className="text-xs text-muted-foreground">{description}</span>
+        )}
+        {durationMs != null && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {formatDuration(durationMs)}
+          </span>
+        )}
+        {toolCount != null && (
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+            <Wrench className="h-3 w-3" />
+            {toolCount} tool{toolCount !== 1 ? "s" : ""}
+          </span>
+        )}
+      </div>
+
+      {/* Response body */}
+      {responseText && (
+        <div className="bg-zinc-50 border rounded px-3 py-2 max-h-96 overflow-y-auto">
+          <div className="prose prose-sm max-w-none prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-code:text-zinc-700 text-xs">
+            <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
+          </div>
+          {isTruncated && (
+            <button
+              className="text-xs text-blue-600 hover:text-blue-800 mt-1 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                setExpanded(!expanded);
+              }}
+            >
+              {expanded ? "Show less" : "Show more..."}
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolDetail({ toolName, toolInput, toolResponse }: {
   toolName: string;
   toolInput: Record<string, unknown>;
@@ -348,6 +444,11 @@ function ToolDetail({ toolName, toolInput, toolResponse }: {
         )}
       </div>
     );
+  }
+
+  // Task tool (subagent)
+  if (toolName === "Task") {
+    return <SubagentDetail toolInput={toolInput} toolResponse={toolResponse} />;
   }
 
   // Generic fallback

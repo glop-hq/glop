@@ -23,7 +23,7 @@ function formatRelative(dateStr: string): string {
   return `${days}d ago`;
 }
 
-export function RelativeTime({ date }: { date: string }) {
+export function RelativeTime({ date, prefix }: { date: string; prefix?: string }) {
   const [text, setText] = useState(() => formatRelative(date));
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export function RelativeTime({ date }: { date: string }) {
 
   return (
     <time dateTime={date} title={new Date(date).toLocaleString()}>
-      {text}
+      {prefix ? `${prefix} ${text}` : text}
     </time>
   );
 }

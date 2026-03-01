@@ -1,9 +1,13 @@
-import path from "path";
+import pg from "pg";
 import { createDb, schema } from "@glop/db";
 import { createHash, randomBytes } from "crypto";
 
-const dbPath = process.env.DATABASE_PATH || path.join(process.cwd(), "..", "..", "glop.db");
-const db = createDb(dbPath);
+const pool = new pg.Pool({
+  connectionString:
+    process.env.DATABASE_URL ||
+    "postgresql://localhost:5432/glop",
+});
+const db = createDb(pool);
 
 function id() {
   return crypto.randomUUID();
@@ -68,13 +72,13 @@ async function seed() {
 
   // Events for run 1
   const run1Events = [
-    { type: "run.started", at: ago(25), payload: { action_label: "Started" } },
-    { type: "run.heartbeat", at: ago(20), payload: { tool_name: "Read", action_label: "Reading package.json", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(15), payload: { tool_name: "Glob", action_label: "Searching for auth files", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(10), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(5), payload: { tool_name: "Write", action_label: "Creating useAuth.ts", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(2), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
-    { type: "run.heartbeat", at: ago(0.5), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
+    { type: "run.started" as const, at: ago(25), payload: { action_label: "Started" } },
+    { type: "run.heartbeat" as const, at: ago(20), payload: { tool_name: "Read", action_label: "Reading package.json", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(15), payload: { tool_name: "Glob", action_label: "Searching for auth files", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(10), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(5), payload: { tool_name: "Write", action_label: "Creating useAuth.ts", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(2), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
+    { type: "run.heartbeat" as const, at: ago(0.5), payload: { tool_name: "Edit", action_label: "Editing auth-provider.tsx", activity_kind: "editing" } },
   ];
 
   for (const evt of run1Events) {
@@ -88,7 +92,7 @@ async function seed() {
       machine_id: machineIds[0],
       repo_key: "acme/frontend",
       branch_name: "feat/auth-flow",
-      payload: JSON.stringify(evt.payload),
+      payload: evt.payload,
     });
   }
 
@@ -117,10 +121,10 @@ async function seed() {
   });
 
   const run2Events = [
-    { type: "run.started", at: ago(12), payload: { action_label: "Started" } },
-    { type: "run.heartbeat", at: ago(8), payload: { tool_name: "Read", action_label: "Reading rate-limiter.ts", activity_kind: "reading" } },
-    { type: "run.heartbeat", at: ago(5), payload: { tool_name: "Edit", action_label: "Editing rate-limiter.ts", activity_kind: "editing" } },
-    { type: "run.heartbeat", at: ago(1), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
+    { type: "run.started" as const, at: ago(12), payload: { action_label: "Started" } },
+    { type: "run.heartbeat" as const, at: ago(8), payload: { tool_name: "Read", action_label: "Reading rate-limiter.ts", activity_kind: "reading" } },
+    { type: "run.heartbeat" as const, at: ago(5), payload: { tool_name: "Edit", action_label: "Editing rate-limiter.ts", activity_kind: "editing" } },
+    { type: "run.heartbeat" as const, at: ago(1), payload: { tool_name: "Bash", action_label: "Running tests", activity_kind: "test_run" } },
   ];
 
   for (const evt of run2Events) {
@@ -134,7 +138,7 @@ async function seed() {
       machine_id: machineIds[1],
       repo_key: "acme/api",
       branch_name: "fix/rate-limiter",
-      payload: JSON.stringify(evt.payload),
+      payload: evt.payload,
     });
   }
 
@@ -217,7 +221,7 @@ async function seed() {
     label: "PR #42",
     external_id: "42",
     state: "merged",
-    metadata: "{}",
+    metadata: {},
     created_at: ago(95),
   });
 
@@ -229,6 +233,8 @@ async function seed() {
   devs.forEach((dev, i) => {
     console.log(`  ${dev.name}: ${apiKeys[i]}`);
   });
+
+  await pool.end();
 }
 
 seed().catch(console.error);
