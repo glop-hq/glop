@@ -3,6 +3,7 @@ import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { applyTimeBasedStatus } from "@/lib/stale-checker";
+import { requireSession, AuthError } from "@/lib/session";
 import type { Run, Event, ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireSession();
     const { id } = await params;
     const db = getDb();
 
@@ -45,12 +47,20 @@ export async function GET(
 
     const artifacts = rawArtifacts as ArtifactInfo[];
 
+    void session; // access control comes in a later phase
+
     return NextResponse.json({
       run,
       events: parsedEvents,
       artifacts,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     console.error("Run detail error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

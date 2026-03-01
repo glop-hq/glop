@@ -3,12 +3,14 @@ import { desc, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { sweepStaleRuns } from "@/lib/stale-checker";
+import { requireSession, AuthError } from "@/lib/session";
 import type { Run, ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const session = await requireSession();
     const db = getDb();
 
     // Persist stale/auto-close status changes so the DB stays accurate
@@ -68,11 +70,19 @@ export async function GET() {
       artifacts: artifacts.filter((a) => a.run_id === run.id),
     }));
 
+    void session; // workspace filtering comes in a later phase
+
     return NextResponse.json({
       runs: runsWithArtifacts,
       updated_at: new Date().toISOString(),
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     console.error("Live board error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

@@ -3,12 +3,14 @@ import { desc, inArray, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { historyQuerySchema } from "@glop/shared";
+import { requireSession, AuthError } from "@/lib/session";
 import type { ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
   try {
+    const session = await requireSession();
     const searchParams = request.nextUrl.searchParams;
     const rawOffset = searchParams.get("offset");
     const rawLimit = searchParams.get("limit");
@@ -60,6 +62,8 @@ export async function GET(request: NextRequest) {
       artifacts: artifacts.filter((a) => a.run_id === run.id),
     }));
 
+    void session; // workspace filtering comes in a later phase
+
     return NextResponse.json({
       runs: runsWithArtifacts,
       total,
@@ -67,6 +71,12 @@ export async function GET(request: NextRequest) {
       limit,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     console.error("History error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

@@ -13,6 +13,8 @@ export function generateApiKey(): string {
 export interface AuthInfo {
   developer_id: string;
   developer_name: string;
+  workspace_id: string;
+  user_id: string | null;
 }
 
 export async function validateApiKey(
@@ -31,12 +33,16 @@ export async function validateApiKey(
   return {
     developer_id: results[0].developer_id,
     developer_name: results[0].developer_name,
+    workspace_id: results[0].workspace_id,
+    user_id: results[0].user_id,
   };
 }
 
 export async function registerDeveloper(
   db: DbClient,
-  developerName: string
+  developerName: string,
+  workspaceId: string,
+  userId?: string
 ): Promise<{ api_key: string; developer_id: string }> {
   const apiKey = generateApiKey();
   const developerId = crypto.randomUUID();
@@ -47,6 +53,8 @@ export async function registerDeveloper(
     key_hash: hash,
     developer_id: developerId,
     developer_name: developerName,
+    workspace_id: workspaceId,
+    user_id: userId || null,
     created_at: new Date().toISOString(),
   });
 

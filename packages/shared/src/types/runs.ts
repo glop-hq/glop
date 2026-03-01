@@ -28,9 +28,14 @@ export type ActivityKind =
   | "blocked"
   | "unknown";
 
+export type RunVisibility = "private" | "workspace" | "shared_link";
+
+export type SharedLinkState = "active" | "revoked";
+
 export interface Run {
   id: string;
-  team_id: string;
+  workspace_id: string;
+  owner_user_id: string | null;
   developer_id: string;
   machine_id: string;
   repo_key: string;
@@ -47,6 +52,12 @@ export interface Run {
   last_action_label: string | null;
   file_count: number;
   files_touched: string[];
+  visibility: RunVisibility;
+  shared_link_id: string | null;
+  shared_link_token_hash: string | null;
+  shared_link_state: SharedLinkState | null;
+  shared_link_expires_at: string | null;
+  share_created_at: string | null;
   started_at: string;
   last_heartbeat_at: string;
   last_event_at: string;

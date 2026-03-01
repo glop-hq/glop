@@ -41,5 +41,5 @@ export const STATUS_COLORS: Record<string, string> = {
   failed: "red",
 };
 
-/** Default team ID for single-team setups */
-export const DEFAULT_TEAM_ID = "default";
+/** Default share link expiry in days */
+export const DEFAULT_SHARE_EXPIRY_DAYS = 30;

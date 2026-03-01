@@ -54,3 +54,40 @@ export interface ApiError {
   error: string;
   code: string;
 }
+
+export interface WorkspaceResponse {
+  id: string;
+  name: string;
+  slug: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberResponse {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: "admin" | "member";
+  created_at: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  provider: string;
+  created_at: string;
+}
+
+export interface AuthMeResponse {
+  user: UserResponse;
+  workspaces: WorkspaceResponse[];
+}

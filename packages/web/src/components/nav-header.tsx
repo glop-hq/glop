@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Radio, Clock } from "lucide-react";
+import { UserMenu } from "./user-menu";
 
 const navItems = [
   { href: "/live", label: "Live Now", icon: Radio },
@@ -36,6 +37,9 @@ export function NavHeader() {
             </Link>
           ))}
         </nav>
+        <div className="ml-auto">
+          <UserMenu />
+        </div>
       </div>
     </header>
   );

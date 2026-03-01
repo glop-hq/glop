@@ -3,7 +3,6 @@ import { schema, type DbClient } from "./db";
 import {
   deriveRunPatch,
   shouldCreateNewRun,
-  DEFAULT_TEAM_ID,
   type Run,
   type EventType,
   type ClassifiedActivity,
@@ -24,6 +23,7 @@ export interface HookContext {
   slug?: string;
   git_user_name: string | null;
   git_user_email: string | null;
+  workspace_id: string;
 }
 
 export interface ProcessedResult {
@@ -147,7 +147,7 @@ export async function processHook(
     runId = generateId();
     await db.insert(schema.runs).values({
       id: runId,
-      team_id: DEFAULT_TEAM_ID,
+      workspace_id: ctx.workspace_id,
       developer_id: ctx.developer_id,
       machine_id: ctx.machine_id,
       repo_key: ctx.repo_key,

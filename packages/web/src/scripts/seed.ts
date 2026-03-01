@@ -24,6 +24,16 @@ function ago(minutes: number): string {
 async function seed() {
   console.log("Seeding database...");
 
+  // Create a demo workspace
+  const workspaceId = id();
+  await db.insert(schema.workspaces).values({
+    id: workspaceId,
+    name: "Acme Corp",
+    slug: "acme",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  });
+
   // Create API keys for demo devs
   const devs = [
     { name: "Alice", id: id() },
@@ -40,6 +50,7 @@ async function seed() {
       key_hash: hashKey(apiKey),
       developer_id: dev.id,
       developer_name: dev.name,
+      workspace_id: workspaceId,
       created_at: new Date().toISOString(),
     });
   }
@@ -50,7 +61,7 @@ async function seed() {
   const run1Id = id();
   await db.insert(schema.runs).values({
     id: run1Id,
-    team_id: "default",
+    workspace_id: workspaceId,
     developer_id: devs[0].id,
     machine_id: machineIds[0],
     repo_key: "acme/frontend",
@@ -100,7 +111,7 @@ async function seed() {
   const run2Id = id();
   await db.insert(schema.runs).values({
     id: run2Id,
-    team_id: "default",
+    workspace_id: workspaceId,
     developer_id: devs[1].id,
     machine_id: machineIds[1],
     repo_key: "acme/api",
@@ -146,7 +157,7 @@ async function seed() {
   const run3Id = id();
   await db.insert(schema.runs).values({
     id: run3Id,
-    team_id: "default",
+    workspace_id: workspaceId,
     developer_id: devs[2].id,
     machine_id: machineIds[2],
     repo_key: "acme/docs",
@@ -170,7 +181,7 @@ async function seed() {
   const run4Id = id();
   await db.insert(schema.runs).values({
     id: run4Id,
-    team_id: "default",
+    workspace_id: workspaceId,
     developer_id: devs[0].id,
     machine_id: machineIds[0],
     repo_key: "acme/frontend",
@@ -193,7 +204,7 @@ async function seed() {
   const run5Id = id();
   await db.insert(schema.runs).values({
     id: run5Id,
-    team_id: "default",
+    workspace_id: workspaceId,
     developer_id: devs[1].id,
     machine_id: machineIds[1],
     repo_key: "acme/api",
@@ -226,6 +237,7 @@ async function seed() {
   });
 
   console.log("Seeded:");
+  console.log("  1 workspace (Acme Corp)");
   console.log("  3 developers with API keys");
   console.log("  5 runs (2 active, 1 stale, 1 completed, 1 failed)");
   console.log("  Events and artifacts");

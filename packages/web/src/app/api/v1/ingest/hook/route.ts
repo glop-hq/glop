@@ -68,6 +68,7 @@ export async function POST(request: NextRequest) {
       slug: typeof body.slug === "string" ? body.slug : undefined,
       git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
       git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
+      workspace_id: auth.workspace_id,
     };
 
     const result = await processHook(db, hookType, body, ctx);
