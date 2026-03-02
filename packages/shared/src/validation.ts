@@ -96,4 +96,34 @@ export const authRegisterSchema = z.object({
 export const historyQuerySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
   limit: z.coerce.number().int().min(1).max(100).default(50),
+  scope: z.enum(["all", "mine", "team"]).default("all"),
+});
+
+export const runVisibilitySchema = z.enum(["private", "workspace", "shared_link"]);
+
+export const sharedLinkStateSchema = z.enum(["active", "revoked"]);
+
+export const memberRoleSchema = z.enum(["admin", "member"]);
+
+export const workspaceCreateSchema = z.object({
+  name: z.string().min(1).max(100),
+  slug: z
+    .string()
+    .min(1)
+    .max(50)
+    .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
+});
+
+export const workspaceUpdateSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+});
+
+export const memberInviteSchema = z.object({
+  email: z.string().email(),
+  role: memberRoleSchema.default("member"),
+});
+
+export const shareRunSchema = z.object({
+  visibility: runVisibilitySchema,
+  expires_in_days: z.number().int().min(1).max(365).optional(),
 });

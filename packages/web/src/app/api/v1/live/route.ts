@@ -1,36 +1,49 @@
 import { NextResponse } from "next/server";
-import { desc, inArray } from "drizzle-orm";
+import { desc, inArray, and } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { sweepStaleRuns } from "@/lib/stale-checker";
+import { requireSession, AuthError } from "@/lib/session";
 import type { Run, ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
+    const session = await requireSession();
     const db = getDb();
 
     // Persist stale/auto-close status changes so the DB stays accurate
     await sweepStaleRuns(db);
 
+    const workspaceIds = session.workspaces.map((w) => w.id);
+    if (workspaceIds.length === 0) {
+      return NextResponse.json({ runs: [], updated_at: new Date().toISOString() });
+    }
+
     const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 
-    // Get active runs (after sweep, only truly active ones remain)
+    // Get active runs filtered by workspace membership
     const runs = await db
       .select()
       .from(schema.runs)
       .where(
-        inArray(schema.runs.status, ["active", "stale", "blocked"])
+        and(
+          inArray(schema.runs.status, ["active", "stale", "blocked"]),
+          inArray(schema.runs.workspace_id, workspaceIds)
+        )
       )
       .orderBy(desc(schema.runs.last_event_at));
 
-    // Also get recently completed runs (active within last 5 minutes)
+    // Also get recently completed runs filtered by workspace
     const recentlyCompleted = await db
       .select()
       .from(schema.runs)
       .where(
-        inArray(schema.runs.status, ["completed", "failed"])
+        and(
+          inArray(schema.runs.status, ["completed", "failed"]),
+          inArray(schema.runs.workspace_id, workspaceIds)
+        )
       )
       .orderBy(desc(schema.runs.last_event_at))
       .limit(5);
@@ -73,6 +86,12 @@ export async function GET() {
       updated_at: new Date().toISOString(),
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     console.error("Live board error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

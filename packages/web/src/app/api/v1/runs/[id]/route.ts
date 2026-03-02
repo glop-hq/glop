@@ -3,7 +3,8 @@ import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { applyTimeBasedStatus } from "@/lib/stale-checker";
-import type { Run, Event, ArtifactInfo } from "@glop/shared";
+import { requireSession, AuthError } from "@/lib/session";
+import { canViewRun, type Run, type Event, type ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const session = await requireSession();
     const { id } = await params;
     const db = getDb();
 
@@ -29,6 +31,18 @@ export async function GET(
     }
 
     const [run] = applyTimeBasedStatus(runs as Run[]);
+
+    // Access control: viewer must be owner or workspace member
+    const viewerCtx = {
+      viewer_user_id: session.user_id,
+      viewer_workspace_ids: session.workspaces.map((w) => w.id),
+    };
+    if (!canViewRun(run, viewerCtx)) {
+      return NextResponse.json(
+        { error: "Access denied", code: "FORBIDDEN" },
+        { status: 403 }
+      );
+    }
 
     const events = await db
       .select()
@@ -51,6 +65,12 @@ export async function GET(
       artifacts,
     });
   } catch (error) {
+    if (error instanceof AuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
     console.error("Run detail error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

@@ -7,6 +7,7 @@ import {
   uuid,
   timestamp,
   jsonb,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 
 // ── Enums ──────────────────────────────────────────────
@@ -72,13 +73,89 @@ export const artifactTypeEnum = pgEnum("artifact_type", [
   "commit",
 ]);
 
+export const memberRoleEnum = pgEnum("member_role", ["admin", "member"]);
+
+export const runVisibilityEnum = pgEnum("run_visibility", [
+  "private",
+  "workspace",
+  "shared_link",
+]);
+
+export const sharedLinkStateEnum = pgEnum("shared_link_state", [
+  "active",
+  "revoked",
+]);
+
 // ── Tables ─────────────────────────────────────────────
+
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: text("email").notNull().unique(),
+    name: text("name"),
+    avatar_url: text("avatar_url"),
+    provider: text("provider").notNull(),
+    provider_account_id: text("provider_account_id").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("users_provider_account_idx").on(
+      table.provider,
+      table.provider_account_id
+    ),
+  ]
+);
+
+export const workspaces = pgTable("workspaces", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  slug: text("slug").notNull().unique(),
+  created_by: uuid("created_by").references(() => users.id),
+  created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const workspace_members = pgTable(
+  "workspace_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: memberRoleEnum("role").notNull().default("member"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("workspace_members_unique_idx").on(
+      table.workspace_id,
+      table.user_id
+    ),
+  ]
+);
 
 export const runs = pgTable(
   "runs",
   {
     id: uuid("id").primaryKey(),
-    team_id: text("team_id").notNull(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    owner_user_id: uuid("owner_user_id").references(() => users.id),
     developer_id: text("developer_id").notNull(),
     machine_id: text("machine_id").notNull(),
     repo_key: text("repo_key").notNull(),
@@ -87,7 +164,9 @@ export const runs = pgTable(
     slug: text("slug"),
     status: runStatusEnum("status").notNull().default("active"),
     phase: runPhaseEnum("phase").notNull().default("unknown"),
-    activity_kind: activityKindEnum("activity_kind").notNull().default("unknown"),
+    activity_kind: activityKindEnum("activity_kind")
+      .notNull()
+      .default("unknown"),
     git_user_name: text("git_user_name"),
     git_user_email: text("git_user_email"),
     title: text("title"),
@@ -95,14 +174,47 @@ export const runs = pgTable(
     current_action: text("current_action"),
     last_action_label: text("last_action_label"),
     file_count: integer("file_count").notNull().default(0),
-    files_touched: jsonb("files_touched").$type<string[]>().notNull().default([]),
-    started_at: timestamp("started_at", { mode: "string", withTimezone: true }).notNull(),
-    last_heartbeat_at: timestamp("last_heartbeat_at", { mode: "string", withTimezone: true }).notNull(),
-    last_event_at: timestamp("last_event_at", { mode: "string", withTimezone: true }).notNull(),
-    completed_at: timestamp("completed_at", { mode: "string", withTimezone: true }),
+    files_touched: jsonb("files_touched")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    visibility: runVisibilityEnum("visibility").notNull().default("private"),
+    shared_link_id: text("shared_link_id"),
+    shared_link_token_hash: text("shared_link_token_hash"),
+    shared_link_state: sharedLinkStateEnum("shared_link_state"),
+    shared_link_expires_at: timestamp("shared_link_expires_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    share_created_at: timestamp("share_created_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    started_at: timestamp("started_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_heartbeat_at: timestamp("last_heartbeat_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_event_at: timestamp("last_event_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    completed_at: timestamp("completed_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
     event_count: integer("event_count").notNull().default(0),
-    created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
-    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true }).notNull(),
+    created_at: timestamp("created_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    updated_at: timestamp("updated_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
   },
   (table) => [
     index("runs_status_idx").on(table.status),
@@ -115,6 +227,10 @@ export const runs = pgTable(
     ),
     index("runs_session_id_idx").on(table.session_id),
     index("runs_slug_idx").on(table.slug),
+    index("runs_workspace_id_idx").on(table.workspace_id),
+    index("runs_owner_user_id_idx").on(table.owner_user_id),
+    index("runs_visibility_idx").on(table.visibility),
+    index("runs_shared_link_id_idx").on(table.shared_link_id),
   ]
 );
 
@@ -123,8 +239,14 @@ export const events = pgTable(
   {
     id: uuid("id").primaryKey(),
     event_type: eventTypeEnum("event_type").notNull(),
-    occurred_at: timestamp("occurred_at", { mode: "string", withTimezone: true }).notNull(),
-    received_at: timestamp("received_at", { mode: "string", withTimezone: true }).notNull(),
+    occurred_at: timestamp("occurred_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    received_at: timestamp("received_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
     run_id: uuid("run_id")
       .notNull()
       .references(() => runs.id),
@@ -132,7 +254,10 @@ export const events = pgTable(
     machine_id: text("machine_id").notNull(),
     repo_key: text("repo_key").notNull(),
     branch_name: text("branch_name").notNull(),
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
+    payload: jsonb("payload")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
   },
   (table) => [
     index("events_run_id_idx").on(table.run_id),
@@ -152,8 +277,14 @@ export const artifacts = pgTable(
     label: text("label"),
     external_id: text("external_id"),
     state: text("state"),
-    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
-    created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+    metadata: jsonb("metadata")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    created_at: timestamp("created_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
   },
   (table) => [index("artifacts_run_id_idx").on(table.run_id)]
 );
@@ -163,5 +294,12 @@ export const api_keys = pgTable("api_keys", {
   key_hash: text("key_hash").notNull().unique(),
   developer_id: text("developer_id").notNull(),
   developer_name: text("developer_name").notNull(),
-  created_at: timestamp("created_at", { mode: "string", withTimezone: true }).notNull(),
+  workspace_id: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id),
+  user_id: uuid("user_id").references(() => users.id),
+  created_at: timestamp("created_at", {
+    mode: "string",
+    withTimezone: true,
+  }).notNull(),
 });

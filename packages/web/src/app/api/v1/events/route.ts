@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       branch_name: parsed.data.branch_name,
       git_user_name: null,
       git_user_email: null,
+      workspace_id: auth.workspace_id,
     };
 
     const result = await processHook(

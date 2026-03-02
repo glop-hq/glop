@@ -54,3 +54,62 @@ export interface ApiError {
   error: string;
   code: string;
 }
+
+export interface WorkspaceResponse {
+  id: string;
+  name: string;
+  slug: string;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MemberResponse {
+  id: string;
+  workspace_id: string;
+  user_id: string;
+  role: "admin" | "member";
+  created_at: string;
+  user?: {
+    id: string;
+    email: string;
+    name: string | null;
+    avatar_url: string | null;
+  };
+}
+
+export interface UserResponse {
+  id: string;
+  email: string;
+  name: string | null;
+  avatar_url: string | null;
+  provider: string;
+  created_at: string;
+}
+
+export interface AuthMeResponse {
+  user: UserResponse;
+  workspaces: WorkspaceResponse[];
+}
+
+export interface ShareRunRequest {
+  visibility: "private" | "workspace" | "shared_link";
+  expires_in_days?: number;
+}
+
+export interface ShareRunResponse {
+  visibility: "private" | "workspace" | "shared_link";
+  shared_link_url?: string;
+  expires_at?: string;
+}
+
+export interface RevokeShareResponse {
+  visibility: "private";
+}
+
+export interface SharedRunDetailResponse {
+  run: Run;
+  events: Event[];
+  artifacts: ArtifactInfo[];
+  shared: true;
+}

@@ -232,6 +232,48 @@ describe("__hook command", () => {
     expect(body.slug).toBe("woolly-scribbling-kay");
   });
 
+  it("extracts slug that appears after several non-slug lines", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(getRepoKey).mockReturnValue("acme/app");
+    vi.mocked(getBranch).mockReturnValue("main");
+    // Real-world layout: slug appears on line 6 after snapshots and user messages
+    const lines = [
+      '{"type":"file-history-snapshot","messageId":"aaa"}',
+      '{"type":"progress","sessionId":"ses-1"}',
+      '{"type":"user","sessionId":"ses-1"}',
+      '{"type":"user","sessionId":"ses-1"}',
+      '{"type":"user","sessionId":"ses-1"}',
+      '{"type":"file-history-snapshot","messageId":"bbb"}',
+      '{"type":"user","sessionId":"ses-1","slug":"late-arriving-slug"}',
+      '{"type":"assistant","sessionId":"ses-1","slug":"late-arriving-slug"}',
+    ];
+    const content = lines.join("\n") + "\n";
+    vi.mocked(openSync).mockReturnValue(42);
+    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
+      const bytes = Buffer.from(content);
+      bytes.copy(buf);
+      return bytes.length;
+    });
+    vi.mocked(closeSync).mockReturnValue(undefined);
+
+    await withMockStdin(
+      JSON.stringify({
+        hook_event_name: "SessionStart",
+        transcript_path: "/tmp/transcript.jsonl",
+      }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
+    expect(body.slug).toBe("late-arriving-slug");
+  });
+
   it("skips slug when transcript file is missing", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       server_url: "http://localhost:3000",

@@ -41,5 +41,26 @@ export const STATUS_COLORS: Record<string, string> = {
   failed: "red",
 };
 
-/** Default team ID for single-team setups */
-export const DEFAULT_TEAM_ID = "default";
+/** Default share link expiry in days */
+export const DEFAULT_SHARE_EXPIRY_DAYS = 30;
+
+/** Number of random bytes for share token generation */
+export const SHARE_TOKEN_BYTES = 32;
+
+/** Regex patterns for detecting secrets in event payloads */
+export const SECRET_PATTERNS: RegExp[] = [
+  // AWS keys
+  /AKIA[0-9A-Z]{16}/g,
+  // AWS secret keys
+  /(?:aws_secret_access_key|AWS_SECRET_ACCESS_KEY)\s*[=:]\s*\S+/g,
+  // JWTs
+  /eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/g,
+  // Bearer tokens
+  /Bearer\s+[A-Za-z0-9_\-.~+/]+=*/g,
+  // GitHub tokens
+  /gh[pousr]_[A-Za-z0-9_]{36,}/g,
+  // Generic API key patterns
+  /(?:api[_-]?key|apikey|secret|token|password|passwd|credential)\s*[=:]\s*["']?[A-Za-z0-9_\-.~+/]{8,}["']?/gi,
+  // .env lines (KEY=value)
+  /^[A-Z_]{2,}=\S+$/gm,
+];

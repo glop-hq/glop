@@ -1,5 +1,5 @@
 import type { Run, RunStatus, RunPhase, ActivityKind, EventType } from "./types/index";
-import { STALE_THRESHOLD_MS, AUTO_CLOSE_THRESHOLD_MS } from "./constants";
+import { STALE_THRESHOLD_MS, AUTO_CLOSE_THRESHOLD_MS, SECRET_PATTERNS } from "./constants";
 
 export interface ClassifiedActivity {
   activity_kind: ActivityKind;
@@ -137,4 +137,70 @@ export function shouldCreateNewRun(
     return true;
   }
   return false;
+}
+
+// ── Access Control ──────────────────────────────────────
+
+export interface ViewerContext {
+  viewer_user_id: string;
+  viewer_workspace_ids: string[];
+}
+
+export function canViewRun(
+  run: Run,
+  ctx: ViewerContext
+): boolean {
+  // Owner can always see their own runs
+  if (run.owner_user_id && run.owner_user_id === ctx.viewer_user_id) {
+    return true;
+  }
+
+  // Workspace members can see runs in their workspaces
+  if (ctx.viewer_workspace_ids.includes(run.workspace_id)) {
+    return true;
+  }
+
+  return false;
+}
+
+export function filterVisibleRuns(
+  runs: Run[],
+  ctx: ViewerContext
+): Run[] {
+  return runs.filter((run) => canViewRun(run, ctx));
+}
+
+// ── Secret Redaction ────────────────────────────────────
+
+export function redactSecrets(input: string): string {
+  let result = input;
+  for (const pattern of SECRET_PATTERNS) {
+    // Reset lastIndex for stateful regexes (global flag)
+    pattern.lastIndex = 0;
+    result = result.replace(pattern, "[REDACTED]");
+  }
+  return result;
+}
+
+export function redactEventPayload(
+  payload: Record<string, unknown>
+): Record<string, unknown> {
+  return deepRedact(payload) as Record<string, unknown>;
+}
+
+function deepRedact(value: unknown): unknown {
+  if (typeof value === "string") {
+    return redactSecrets(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map(deepRedact);
+  }
+  if (value !== null && typeof value === "object") {
+    const result: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      result[k] = deepRedact(v);
+    }
+    return result;
+  }
+  return value;
 }
