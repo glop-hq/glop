@@ -1,4 +1,4 @@
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { schema, type DbClient } from "./db";
 import {
   deriveRunPatch,
@@ -112,31 +112,6 @@ export async function processHook(
           .set({ session_id: ctx.session_id })
           .where(eq(schema.runs.id, existingRun.id));
       }
-    }
-  }
-
-  // Fall back to identity tuple lookup for open runs
-  if (!existingRun) {
-    const identityRuns = await db
-      .select()
-      .from(schema.runs)
-      .where(
-        and(
-          eq(schema.runs.developer_id, ctx.developer_id),
-          eq(schema.runs.machine_id, ctx.machine_id),
-          eq(schema.runs.repo_key, ctx.repo_key),
-          eq(schema.runs.branch_name, ctx.branch_name),
-          inArray(schema.runs.status, ["active", "stale", "blocked"])
-        )
-      )
-      .limit(1);
-    const candidate = identityRuns[0] || null;
-    // Only reuse if session IDs match (or if the incoming event has no session_id)
-    if (candidate && ctx.session_id && candidate.session_id && candidate.session_id !== ctx.session_id) {
-      // Different session — don't merge into this run
-      existingRun = null;
-    } else {
-      existingRun = candidate;
     }
   }
 
