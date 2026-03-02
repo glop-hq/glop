@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
-import { desc, inArray, and } from "drizzle-orm";
+import { NextRequest, NextResponse } from "next/server";
+import { desc, inArray, and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { sweepStaleRuns } from "@/lib/stale-checker";
@@ -8,7 +8,7 @@ import type { Run, ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const session = await requireSession();
     const db = getDb();
@@ -16,10 +16,17 @@ export async function GET() {
     // Persist stale/auto-close status changes so the DB stays accurate
     await sweepStaleRuns(db);
 
-    const workspaceIds = session.workspaces.map((w) => w.id);
-    if (workspaceIds.length === 0) {
+    const allWorkspaceIds = session.workspaces.map((w) => w.id);
+    if (allWorkspaceIds.length === 0) {
       return NextResponse.json({ runs: [], updated_at: new Date().toISOString() });
     }
+
+    // Scope to a single workspace if requested, otherwise all
+    const requestedId = request.nextUrl.searchParams.get("workspace_id");
+    const workspaceIds =
+      requestedId && allWorkspaceIds.includes(requestedId)
+        ? [requestedId]
+        : allWorkspaceIds;
 
     const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 

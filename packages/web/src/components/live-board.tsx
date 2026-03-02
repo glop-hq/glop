@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useCallback } from "react";
 import { useLiveBoard } from "@/hooks/use-live-board";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { RunRow } from "./run-row";
 import { ColumnHeader, type SortDir } from "./column-header";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -41,7 +42,8 @@ function getDeveloperName(run: { git_user_name: string | null; title: string | n
 }
 
 export function LiveBoard() {
-  const { data, error, loading } = useLiveBoard();
+  const { currentWorkspace } = useWorkspaces();
+  const { data, error, loading } = useLiveBoard(currentWorkspace?.id);
   const [sort, setSort] = useState<SortState>({ field: "updated", dir: "desc" });
   const [filters, setFilters] = useState<FilterState>({
     developer: new Set(),

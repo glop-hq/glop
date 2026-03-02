@@ -114,6 +114,10 @@ export const workspaceCreateSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
 });
 
+export const workspaceCreateRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
 export const workspaceUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
 });

@@ -7,7 +7,7 @@ import { useWorkspaces } from "@/hooks/use-workspaces";
 
 function CliAuthContent() {
   const { data: session, status } = useSession();
-  const { workspaces } = useWorkspaces();
+  const { workspaces, currentWorkspace } = useWorkspaces();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -15,10 +15,10 @@ function CliAuthContent() {
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
 
   useEffect(() => {
-    if (workspaces.length === 1 && !selectedWorkspaceId) {
-      setSelectedWorkspaceId(workspaces[0].id);
+    if (currentWorkspace && !selectedWorkspaceId) {
+      setSelectedWorkspaceId(currentWorkspace.id);
     }
-  }, [workspaces, selectedWorkspaceId]);
+  }, [currentWorkspace, selectedWorkspaceId]);
 
   const port = searchParams.get("port");
 

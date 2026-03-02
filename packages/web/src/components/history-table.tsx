@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { HistoryResponse, Run } from "@glop/shared";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { ColumnHeader, type SortDir } from "./column-header";
 import { RelativeTime } from "./relative-time";
 import { Button } from "@/components/ui/button";
@@ -72,12 +73,14 @@ export function HistoryTable({ scope }: HistoryTableProps) {
     repo: new Set(),
   });
   const router = useRouter();
+  const { currentWorkspace } = useWorkspaces();
 
   const fetchData = useCallback(async (showRefresh = false) => {
+    if (!currentWorkspace) return;
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}`);
+      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}&workspace_id=${currentWorkspace.id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -87,7 +90,7 @@ export function HistoryTable({ scope }: HistoryTableProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [scope]);
+  }, [scope, currentWorkspace]);
 
   useEffect(() => {
     fetchData();

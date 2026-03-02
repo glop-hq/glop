@@ -14,14 +14,13 @@ import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
   const { data: session } = useSession();
-  const { workspaces: wsDetails, refetch: refetchWorkspaces } = useWorkspaces();
+  const { currentWorkspace: workspaceDetail, refetch: refetchWorkspaces } = useWorkspaces();
 
   // Get workspace auth info (id + role) from session
   const sessionWorkspaces = (
     (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
   ) || [];
-  const workspace = sessionWorkspaces[0];
-  const workspaceDetail = wsDetails.find((w) => w.id === workspace?.id);
+  const workspace = sessionWorkspaces.find((w) => w.id === workspaceDetail?.id) || sessionWorkspaces[0];
 
   if (!workspace) {
     return (
