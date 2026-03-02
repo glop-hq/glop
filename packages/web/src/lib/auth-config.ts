@@ -151,65 +151,49 @@ export const authConfig: NextAuthConfig = {
       return true;
     },
 
-    async jwt({ token, account, trigger }) {
-      if (account || trigger === "update") {
-        // On sign-in or session update, look up our user and embed info in the JWT
-        const db = getDb();
+    async jwt({ token, account }) {
+      const db = getDb();
 
-        let dbUser;
-        if (account) {
-          const found = await db
-            .select()
-            .from(schema.users)
-            .where(
-              and(
-                eq(schema.users.provider, account.provider),
-                eq(
-                  schema.users.provider_account_id,
-                  account.providerAccountId
-                )
+      if (account) {
+        // On sign-in, look up our user by provider and embed info in the JWT
+        const found = await db
+          .select()
+          .from(schema.users)
+          .where(
+            and(
+              eq(schema.users.provider, account.provider),
+              eq(
+                schema.users.provider_account_id,
+                account.providerAccountId
               )
             )
-            .limit(1);
-          dbUser = found[0];
-        } else if (token.user_id) {
-          const found = await db
-            .select()
-            .from(schema.users)
-            .where(eq(schema.users.id, token.user_id as string))
-            .limit(1);
-          dbUser = found[0];
-        }
+          )
+          .limit(1);
 
-        if (dbUser) {
-          token.user_id = dbUser.id;
-          token.email = dbUser.email;
-          token.name = dbUser.name;
-          token.avatar_url = dbUser.avatar_url;
-
-          // Fetch workspace memberships
-          const memberships = await db
-            .select({
-              workspace_id: schema.workspace_members.workspace_id,
-              role: schema.workspace_members.role,
-              workspace_name: schema.workspaces.name,
-              workspace_slug: schema.workspaces.slug,
-            })
-            .from(schema.workspace_members)
-            .innerJoin(
-              schema.workspaces,
-              eq(schema.workspace_members.workspace_id, schema.workspaces.id)
-            )
-            .where(eq(schema.workspace_members.user_id, dbUser.id));
-
-          token.workspaces = memberships.map((m) => ({
-            id: m.workspace_id,
-            name: m.workspace_name,
-            slug: m.workspace_slug,
-            role: m.role,
-          }));
+        if (found[0]) {
+          token.user_id = found[0].id;
+          token.email = found[0].email;
+          token.name = found[0].name;
+          token.avatar_url = found[0].avatar_url;
         }
       }
+
+      // Always refresh workspace memberships from DB (IDs + roles only)
+      if (token.user_id) {
+        const memberships = await db
+          .select({
+            workspace_id: schema.workspace_members.workspace_id,
+            role: schema.workspace_members.role,
+          })
+          .from(schema.workspace_members)
+          .where(eq(schema.workspace_members.user_id, token.user_id as string));
+
+        token.workspaces = memberships.map((m) => ({
+          id: m.workspace_id,
+          role: m.role,
+        }));
+      }
+
       return token;
     },
 

@@ -2,8 +2,6 @@ import { auth } from "../../auth";
 
 export interface SessionWorkspace {
   id: string;
-  name: string;
-  slug: string;
   role: "admin" | "member";
 }
 

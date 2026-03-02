@@ -2,11 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
 import { Radio, Clock } from "lucide-react";
 import { UserMenu } from "./user-menu";
-import type { SessionWorkspace } from "@/lib/session";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 
 const navItems = [
   { href: "/live", label: "Live Now", icon: Radio },
@@ -15,10 +14,7 @@ const navItems = [
 
 export function NavHeader() {
   const pathname = usePathname();
-  const { data: session } = useSession();
-  const workspaces = (
-    (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
-  ) || [];
+  const { workspaces } = useWorkspaces();
   const currentWorkspace = workspaces[0];
 
   return (
@@ -28,7 +24,7 @@ export function NavHeader() {
           <span className="text-lg font-bold tracking-tight">glop</span>
         </Link>
         {currentWorkspace && (
-          <span className="mr-6 text-sm text-muted-foreground border-l pl-4">
+          <span className="mr-6 max-w-[200px] truncate text-sm text-muted-foreground border-l pl-4" title={currentWorkspace.name}>
             {currentWorkspace.name}
           </span>
         )}

@@ -3,19 +3,16 @@
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-import type { SessionWorkspace } from "@/lib/session";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 
 function CliAuthContent() {
   const { data: session, status } = useSession();
+  const { workspaces } = useWorkspaces();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
-
-  const workspaces = (
-    (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
-  ) || [];
 
   useEffect(() => {
     if (workspaces.length === 1 && !selectedWorkspaceId) {

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useInviteLink } from "@/hooks/use-invite-link";
 import { NavHeader } from "@/components/nav-header";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,14 @@ import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
   const { data: session } = useSession();
+  const { workspaces: wsDetails, refetch: refetchWorkspaces } = useWorkspaces();
 
-  // Get workspaces from the session token
-  const workspaces = (
+  // Get workspace auth info (id + role) from session
+  const sessionWorkspaces = (
     (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
   ) || [];
-  const workspace = workspaces[0];
+  const workspace = sessionWorkspaces[0];
+  const workspaceDetail = wsDetails.find((w) => w.id === workspace?.id);
 
   if (!workspace) {
     return (
@@ -37,10 +40,14 @@ export default function WorkspaceSettingsPage() {
       <main className="mx-auto max-w-3xl p-6 space-y-6">
         <div>
           <h1 className="text-xl font-semibold">Workspace Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">{workspace.name}</p>
+          <p className="max-w-md truncate text-sm text-muted-foreground mt-1" title={workspaceDetail?.name}>{workspaceDetail?.name}</p>
         </div>
         {workspace.role === "admin" && (
-          <GeneralSection workspaceId={workspace.id} workspaceName={workspace.name} />
+          <GeneralSection
+            workspaceId={workspace.id}
+            workspaceName={workspaceDetail?.name || ""}
+            onSaved={refetchWorkspaces}
+          />
         )}
         <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
         {workspace.role === "admin" && (
@@ -54,11 +61,12 @@ export default function WorkspaceSettingsPage() {
 function GeneralSection({
   workspaceId,
   workspaceName,
+  onSaved,
 }: {
   workspaceId: string;
   workspaceName: string;
+  onSaved: () => void;
 }) {
-  const { update: updateSession } = useSession();
   const [name, setName] = useState(workspaceName);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,7 +93,7 @@ function GeneralSection({
         throw new Error(data.error || `HTTP ${res.status}`);
       }
 
-      await updateSession();
+      onSaved();
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (err) {
