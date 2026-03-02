@@ -8,7 +8,7 @@ import { NavHeader } from "@/components/nav-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
@@ -57,7 +57,7 @@ function MembersSection({
   isAdmin: boolean;
   currentUserId?: string;
 }) {
-  const { members, invitations, loading, error, inviteMember, updateMemberRole, removeMember, cancelInvitation } =
+  const { members, invitations, loading, error, inviteMember, updateMemberRole, removeMember, cancelInvitation, resendInvitation } =
     useWorkspaceMembers(workspaceId);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
@@ -75,7 +75,7 @@ function MembersSection({
     setInviteSuccess(null);
     try {
       await inviteMember(inviteEmail.trim(), inviteRole);
-      setInviteSuccess(`Invitation sent to ${inviteEmail.trim()}`);
+      setInviteSuccess(`Invite sent to ${inviteEmail.trim()}`);
       setInviteEmail("");
       setInviteRole("member");
     } catch (err) {
@@ -114,6 +114,18 @@ function MembersSection({
       await cancelInvitation(invitationId);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to cancel invitation");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    setActionLoading(`resend-${invitationId}`);
+    try {
+      await resendInvitation(invitationId);
+      setInviteSuccess("Invitation email resent");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to resend invitation");
     } finally {
       setActionLoading(null);
     }
@@ -237,19 +249,36 @@ function MembersSection({
                     </span>
                     <span className="text-xs text-muted-foreground capitalize">{invitation.role}</span>
                     {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="cursor-pointer h-7 w-7 p-0 text-destructive hover:text-destructive"
-                        disabled={actionLoading === invitation.id}
-                        onClick={() => handleCancelInvitation(invitation.id)}
-                      >
-                        {actionLoading === invitation.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        ) : (
-                          <X className="h-3.5 w-3.5" />
-                        )}
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Resend email"
+                          className="cursor-pointer h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          disabled={actionLoading === `resend-${invitation.id}`}
+                          onClick={() => handleResendInvitation(invitation.id)}
+                        >
+                          {actionLoading === `resend-${invitation.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Cancel invitation"
+                          className="cursor-pointer h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          disabled={actionLoading === invitation.id}
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                        >
+                          {actionLoading === invitation.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <X className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>

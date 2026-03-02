@@ -90,6 +90,18 @@ export function useWorkspaceMembers(workspaceId: string) {
     await fetchMembers();
   };
 
+  const resendInvitation = async (invitationId: string) => {
+    const res = await fetch(
+      `/api/v1/workspaces/${workspaceId}/invitations/${invitationId}`,
+      { method: "POST" }
+    );
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+  };
+
   return {
     members,
     invitations,
@@ -99,6 +111,7 @@ export function useWorkspaceMembers(workspaceId: string) {
     updateMemberRole,
     removeMember,
     cancelInvitation,
+    resendInvitation,
     refetch: fetchMembers,
   };
 }

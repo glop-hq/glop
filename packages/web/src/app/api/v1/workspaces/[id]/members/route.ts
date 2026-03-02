@@ -4,6 +4,7 @@ import { getDb, schema } from "@/lib/db";
 import { requireSession, AuthError } from "@/lib/session";
 import { requireWorkspaceMember, isWorkspaceAdmin, WorkspaceAuthError } from "@/lib/workspace-auth";
 import { memberInviteSchema, INVITATION_EXPIRY_DAYS } from "@glop/shared";
+import { sendInvitationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -223,12 +224,29 @@ export async function POST(
       created_at: now.toISOString(),
     });
 
-    // Fetch inviter info for response
+    // Fetch inviter info and workspace name for response + email
     const inviter = await db
       .select({ id: schema.users.id, email: schema.users.email, name: schema.users.name })
       .from(schema.users)
       .where(eq(schema.users.id, session.user_id))
       .limit(1);
+
+    const workspace = await db
+      .select({ name: schema.workspaces.name })
+      .from(schema.workspaces)
+      .where(eq(schema.workspaces.id, workspaceId))
+      .limit(1);
+
+    // Send invitation email (fire-and-forget — don't block the response)
+    const inviterName = inviter[0]?.name || inviter[0]?.email || "Someone";
+    const workspaceName = workspace[0]?.name || "a workspace";
+    const signupUrl = `${request.nextUrl.origin}/login`;
+    sendInvitationEmail({
+      to: email,
+      inviterName,
+      workspaceName,
+      signupUrl,
+    });
 
     return NextResponse.json({
       invitation: {
