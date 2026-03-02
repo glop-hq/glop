@@ -13,7 +13,7 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, Hash, FolderGit2, Link2 } from "lucide-react";
+import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { RunVisibility, Run, RunStatus } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
@@ -80,39 +80,27 @@ export function RunDetailView({ runId }: { runId: string }) {
             />
             {run.title || `Run ${run.id.slice(0, 8)}`}
           </h1>
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Monitor className="h-3.5 w-3.5" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1 shrink-0">
+              <Monitor className="h-3.5 w-3.5 shrink-0" />
               {run.git_user_name || run.developer_id.slice(0, 8)}
             </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+            <span className="flex items-center gap-1 shrink-0">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               <RelativeTime date={run.started_at} />
             </span>
-            <span className="flex items-center gap-1 font-mono">
-              <FolderGit2 className="h-3.5 w-3.5" />
-              {run.repo_key}
+            <span className="flex items-center gap-1 font-mono min-w-0">
+              <FolderGit2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{run.repo_key}</span>
             </span>
-            <span className="flex items-center gap-1 font-mono">
-              <GitBranch className="h-3.5 w-3.5" />
-              {run.branch_name}
+            <span className="flex items-center gap-1 font-mono min-w-0">
+              <GitBranch className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{run.branch_name}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <FileCode className="h-3.5 w-3.5" />
+            <span className="flex items-center gap-1 shrink-0">
+              <FileCode className="h-3.5 w-3.5 shrink-0" />
               {run.file_count} files
             </span>
-            {run.session_id && (
-              <span className="flex items-center gap-1 font-mono" title={run.session_id}>
-                <Hash className="h-3.5 w-3.5" />
-                {run.session_id.slice(0, 8)}
-              </span>
-            )}
-            {run.slug && (
-              <span className="flex items-center gap-1 font-mono" title={run.slug}>
-                <Link2 className="h-3.5 w-3.5" />
-                {run.slug}
-              </span>
-            )}
           </div>
         </div>
         <div className="flex items-center gap-3">

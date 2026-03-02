@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
 import { useWorkspaces } from "@/hooks/use-workspaces";
@@ -67,6 +67,7 @@ function GeneralSection({
   onSaved: () => void;
 }) {
   const [name, setName] = useState(workspaceName);
+  useEffect(() => { setName(workspaceName); }, [workspaceName]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
