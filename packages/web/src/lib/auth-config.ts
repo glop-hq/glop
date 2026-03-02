@@ -79,32 +79,113 @@ export const authConfig: NextAuthConfig = {
           .where(eq(schema.users.id, existing[0].id));
       }
 
+      // Resolve pending invitations for this email
+      const userEmail = user.email!;
+      const pendingInvitations = await db
+        .select()
+        .from(schema.workspace_invitations)
+        .where(
+          and(
+            eq(schema.workspace_invitations.email, userEmail),
+            eq(schema.workspace_invitations.status, "pending")
+          )
+        );
+
+      const now = new Date();
+      // Look up the user's ID (may have just been created above)
+      const resolvedUser = await db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.email, userEmail))
+        .limit(1);
+
+      if (resolvedUser[0] && pendingInvitations.length > 0) {
+        const userId = resolvedUser[0].id;
+
+        for (const invitation of pendingInvitations) {
+          if (new Date(invitation.expires_at) < now) {
+            // Expired — mark as revoked
+            await db
+              .update(schema.workspace_invitations)
+              .set({ status: "revoked" })
+              .where(eq(schema.workspace_invitations.id, invitation.id));
+            continue;
+          }
+
+          // Check not already a member
+          const alreadyMember = await db
+            .select({ id: schema.workspace_members.id })
+            .from(schema.workspace_members)
+            .where(
+              and(
+                eq(schema.workspace_members.workspace_id, invitation.workspace_id),
+                eq(schema.workspace_members.user_id, userId)
+              )
+            )
+            .limit(1);
+
+          if (alreadyMember.length > 0) {
+            await db
+              .update(schema.workspace_invitations)
+              .set({ status: "accepted", accepted_at: now.toISOString() })
+              .where(eq(schema.workspace_invitations.id, invitation.id));
+            continue;
+          }
+
+          // Add to workspace
+          await db.insert(schema.workspace_members).values({
+            id: crypto.randomUUID(),
+            workspace_id: invitation.workspace_id,
+            user_id: userId,
+            role: invitation.role,
+            created_at: now.toISOString(),
+          });
+
+          await db
+            .update(schema.workspace_invitations)
+            .set({ status: "accepted", accepted_at: now.toISOString() })
+            .where(eq(schema.workspace_invitations.id, invitation.id));
+        }
+      }
+
       return true;
     },
 
-    async jwt({ token, account }) {
-      if (account) {
-        // On sign-in, look up our user and embed info in the JWT
+    async jwt({ token, account, trigger }) {
+      if (account || trigger === "update") {
+        // On sign-in or session update, look up our user and embed info in the JWT
         const db = getDb();
-        const users = await db
-          .select()
-          .from(schema.users)
-          .where(
-            and(
-              eq(schema.users.provider, account.provider),
-              eq(
-                schema.users.provider_account_id,
-                account.providerAccountId
+
+        let dbUser;
+        if (account) {
+          const found = await db
+            .select()
+            .from(schema.users)
+            .where(
+              and(
+                eq(schema.users.provider, account.provider),
+                eq(
+                  schema.users.provider_account_id,
+                  account.providerAccountId
+                )
               )
             )
-          )
-          .limit(1);
+            .limit(1);
+          dbUser = found[0];
+        } else if (token.user_id) {
+          const found = await db
+            .select()
+            .from(schema.users)
+            .where(eq(schema.users.id, token.user_id as string))
+            .limit(1);
+          dbUser = found[0];
+        }
 
-        if (users[0]) {
-          token.user_id = users[0].id;
-          token.email = users[0].email;
-          token.name = users[0].name;
-          token.avatar_url = users[0].avatar_url;
+        if (dbUser) {
+          token.user_id = dbUser.id;
+          token.email = dbUser.email;
+          token.name = dbUser.name;
+          token.avatar_url = dbUser.avatar_url;
 
           // Fetch workspace memberships
           const memberships = await db
@@ -119,7 +200,7 @@ export const authConfig: NextAuthConfig = {
               schema.workspaces,
               eq(schema.workspace_members.workspace_id, schema.workspaces.id)
             )
-            .where(eq(schema.workspace_members.user_id, users[0].id));
+            .where(eq(schema.workspace_members.user_id, dbUser.id));
 
           token.workspaces = memberships.map((m) => ({
             id: m.workspace_id,

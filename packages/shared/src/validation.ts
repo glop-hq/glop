@@ -127,3 +127,12 @@ export const shareRunSchema = z.object({
   visibility: runVisibilitySchema,
   expires_in_days: z.number().int().min(1).max(365).optional(),
 });
+
+export const inviteLinkCreateSchema = z.object({
+  role: memberRoleSchema.default("member"),
+});
+
+export const inviteLinkUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  role: memberRoleSchema.optional(),
+});

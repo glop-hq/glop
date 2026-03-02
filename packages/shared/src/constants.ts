@@ -47,6 +47,12 @@ export const DEFAULT_SHARE_EXPIRY_DAYS = 30;
 /** Number of random bytes for share token generation */
 export const SHARE_TOKEN_BYTES = 32;
 
+/** Invitation expiry in days */
+export const INVITATION_EXPIRY_DAYS = 7;
+
+/** Number of random bytes for invite link token generation */
+export const INVITE_LINK_TOKEN_BYTES = 32;
+
 /** Regex patterns for detecting secrets in event payloads */
 export const SECRET_PATTERNS: RegExp[] = [
   // AWS keys
