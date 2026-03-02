@@ -5,22 +5,16 @@ import { getRepoKey, getBranch, getGitUserName, getGitUserEmail } from "../lib/g
 
 function extractSlugFromTranscript(transcriptPath: string): string | null {
   try {
-    // Read only the first 4KB to avoid loading large transcripts into memory
     const fd = openSync(transcriptPath, "r");
-    const buf = Buffer.alloc(4096);
-    const bytesRead = readSync(fd, buf, 0, 4096, 0);
+    const buf = Buffer.alloc(8192);
+    const bytesRead = readSync(fd, buf, 0, 8192, 0);
     closeSync(fd);
     const head = buf.toString("utf-8", 0, bytesRead);
-    const lines = head.split("\n").slice(0, 5);
-    for (const line of lines) {
-      if (!line.trim()) continue;
-      const entry = JSON.parse(line);
-      if (typeof entry.slug === "string") return entry.slug;
-    }
+    const match = head.match(/"slug":"([^"]+)"/);
+    return match ? match[1] : null;
   } catch {
-    // File missing, unreadable, or no slug — skip
+    return null;
   }
-  return null;
 }
 
 export const hookCommand = new Command("__hook")

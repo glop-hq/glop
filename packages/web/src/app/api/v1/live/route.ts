@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { desc, inArray } from "drizzle-orm";
+import { desc, inArray, and } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { sweepStaleRuns } from "@/lib/stale-checker";
@@ -16,23 +16,34 @@ export async function GET() {
     // Persist stale/auto-close status changes so the DB stays accurate
     await sweepStaleRuns(db);
 
+    const workspaceIds = session.workspaces.map((w) => w.id);
+    if (workspaceIds.length === 0) {
+      return NextResponse.json({ runs: [], updated_at: new Date().toISOString() });
+    }
+
     const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 
-    // Get active runs (after sweep, only truly active ones remain)
+    // Get active runs filtered by workspace membership
     const runs = await db
       .select()
       .from(schema.runs)
       .where(
-        inArray(schema.runs.status, ["active", "stale", "blocked"])
+        and(
+          inArray(schema.runs.status, ["active", "stale", "blocked"]),
+          inArray(schema.runs.workspace_id, workspaceIds)
+        )
       )
       .orderBy(desc(schema.runs.last_event_at));
 
-    // Also get recently completed runs (active within last 5 minutes)
+    // Also get recently completed runs filtered by workspace
     const recentlyCompleted = await db
       .select()
       .from(schema.runs)
       .where(
-        inArray(schema.runs.status, ["completed", "failed"])
+        and(
+          inArray(schema.runs.status, ["completed", "failed"]),
+          inArray(schema.runs.workspace_id, workspaceIds)
+        )
       )
       .orderBy(desc(schema.runs.last_event_at))
       .limit(5);
@@ -69,8 +80,6 @@ export async function GET() {
       ...run,
       artifacts: artifacts.filter((a) => a.run_id === run.id),
     }));
-
-    void session; // workspace filtering comes in a later phase
 
     return NextResponse.json({
       runs: runsWithArtifacts,

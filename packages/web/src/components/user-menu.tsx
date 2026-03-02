@@ -2,12 +2,14 @@
 
 import { useSession, signOut } from "next-auth/react";
 import { useState, useRef, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { LogOut, Settings, ChevronDown } from "lucide-react";
 
 export function UserMenu() {
   const { data: session } = useSession();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -55,7 +57,7 @@ export function UserMenu() {
           <button
             onClick={() => {
               setOpen(false);
-              // Settings page placeholder
+              router.push("/settings/workspace");
             }}
             className="flex w-full cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-secondary"
           >

@@ -42,13 +42,13 @@ describe("historyQuerySchema", () => {
   it("uses defaults when empty", () => {
     const result = historyQuerySchema.safeParse({});
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ offset: 0, limit: 50 });
+    expect(result.data).toEqual({ offset: 0, limit: 50, scope: "all" });
   });
 
   it("coerces string numbers", () => {
     const result = historyQuerySchema.safeParse({ offset: "10", limit: "25" });
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ offset: 10, limit: 25 });
+    expect(result.data).toEqual({ offset: 10, limit: 25, scope: "all" });
   });
 
   it("rejects negative offset", () => {

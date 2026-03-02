@@ -91,3 +91,25 @@ export interface AuthMeResponse {
   user: UserResponse;
   workspaces: WorkspaceResponse[];
 }
+
+export interface ShareRunRequest {
+  visibility: "private" | "workspace" | "shared_link";
+  expires_in_days?: number;
+}
+
+export interface ShareRunResponse {
+  visibility: "private" | "workspace" | "shared_link";
+  shared_link_url?: string;
+  expires_at?: string;
+}
+
+export interface RevokeShareResponse {
+  visibility: "private";
+}
+
+export interface SharedRunDetailResponse {
+  run: Run;
+  events: Event[];
+  artifacts: ArtifactInfo[];
+  shared: true;
+}

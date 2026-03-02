@@ -2,7 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
+import type { SessionWorkspace } from "@/lib/session";
 
 function CliAuthContent() {
   const { data: session, status } = useSession();
@@ -10,6 +11,17 @@ function CliAuthContent() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
+
+  const workspaces = (
+    (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
+  ) || [];
+
+  useEffect(() => {
+    if (workspaces.length === 1 && !selectedWorkspaceId) {
+      setSelectedWorkspaceId(workspaces[0].id);
+    }
+  }, [workspaces, selectedWorkspaceId]);
 
   const port = searchParams.get("port");
 
@@ -48,7 +60,10 @@ function CliAuthContent() {
       const res = await fetch(`/api/v1/auth/cli-token`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callback_port: Number(port) }),
+        body: JSON.stringify({
+          callback_port: Number(port),
+          workspace_id: selectedWorkspaceId,
+        }),
       });
 
       if (!res.ok) {
@@ -96,6 +111,30 @@ function CliAuthContent() {
           </div>
         </div>
 
+        {workspaces.length > 1 && (
+          <div className="mb-4">
+            <label
+              htmlFor="workspace-select"
+              className="mb-1.5 block text-sm font-medium"
+            >
+              Workspace
+            </label>
+            <select
+              id="workspace-select"
+              value={selectedWorkspaceId}
+              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
+              className="w-full cursor-pointer rounded-md border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select a workspace</option>
+              {workspaces.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -105,7 +144,7 @@ function CliAuthContent() {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleAuthorize}
-            disabled={loading}
+            disabled={loading || !selectedWorkspaceId}
             className="w-full cursor-pointer rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Authorizing..." : "Authorize"}

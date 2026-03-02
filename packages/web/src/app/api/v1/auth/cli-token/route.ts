@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
 import { registerDeveloper } from "@/lib/auth";
 import { requireSession, AuthError } from "@/lib/session";
+import {
+  requireWorkspaceMember,
+  WorkspaceAuthError,
+} from "@/lib/workspace-auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,13 +21,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const workspaceId = session.workspaces[0]?.id;
+    const workspaceId = body.workspace_id || session.workspaces[0]?.id;
     if (!workspaceId) {
       return NextResponse.json(
         { error: "No workspace found", code: "NO_WORKSPACE" },
         { status: 400 }
       );
     }
+
+    requireWorkspaceMember(session, workspaceId);
 
     const db = getDb();
     const result = await registerDeveloper(
@@ -47,6 +53,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: error.message, code: "UNAUTHORIZED" },
         { status: 401 }
+      );
+    }
+    if (error instanceof WorkspaceAuthError) {
+      return NextResponse.json(
+        { error: error.message, code: "FORBIDDEN" },
+        { status: 403 }
       );
     }
     console.error("CLI token error:", error);

@@ -40,6 +40,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!auth.user_id) {
+      return NextResponse.json(
+        { error: "API key is not linked to a user. Please re-authenticate.", code: "UNAUTHORIZED" },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     // Determine hook type from payload
@@ -69,6 +76,7 @@ export async function POST(request: NextRequest) {
       git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
       git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
       workspace_id: auth.workspace_id,
+      user_id: auth.user_id,
     };
 
     const result = await processHook(db, hookType, body, ctx);

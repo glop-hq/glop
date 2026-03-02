@@ -24,6 +24,7 @@ export interface HookContext {
   git_user_name: string | null;
   git_user_email: string | null;
   workspace_id: string;
+  user_id?: string | null;
 }
 
 export interface ProcessedResult {
@@ -148,6 +149,7 @@ export async function processHook(
     await db.insert(schema.runs).values({
       id: runId,
       workspace_id: ctx.workspace_id,
+      owner_user_id: ctx.user_id || null,
       developer_id: ctx.developer_id,
       machine_id: ctx.machine_id,
       repo_key: ctx.repo_key,

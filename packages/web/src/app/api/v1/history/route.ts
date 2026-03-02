@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, inArray, sql } from "drizzle-orm";
+import { desc, inArray, and, sql, eq, ne } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { historyQuerySchema } from "@glop/shared";
@@ -14,9 +14,11 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const rawOffset = searchParams.get("offset");
     const rawLimit = searchParams.get("limit");
+    const rawScope = searchParams.get("scope");
     const parsed = historyQuerySchema.safeParse({
       offset: rawOffset ?? undefined,
       limit: rawLimit ?? undefined,
+      scope: rawScope ?? undefined,
     });
 
     if (!parsed.success) {
@@ -26,13 +28,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { offset, limit } = parsed.data;
+    const { offset, limit, scope } = parsed.data;
     const db = getDb();
+
+    const workspaceIds = session.workspaces.map((w) => w.id);
+    if (workspaceIds.length === 0) {
+      return NextResponse.json({ runs: [], total: 0, offset, limit });
+    }
+
+    const baseConditions = [
+      inArray(schema.runs.status, ["completed", "failed"]),
+      inArray(schema.runs.workspace_id, workspaceIds),
+      sql`${schema.runs.owner_user_id} IS NOT NULL`,
+    ];
+
+    if (scope === "mine") {
+      baseConditions.push(eq(schema.runs.owner_user_id, session.user_id));
+      baseConditions.push(eq(schema.runs.visibility, "private"));
+    } else if (scope === "team") {
+      baseConditions.push(eq(schema.runs.visibility, "workspace"));
+    }
+
+    const statusFilter = and(...baseConditions);
 
     const runs = await db
       .select()
       .from(schema.runs)
-      .where(inArray(schema.runs.status, ["completed", "failed"]))
+      .where(statusFilter)
       .orderBy(desc(schema.runs.completed_at))
       .limit(limit)
       .offset(offset);
@@ -40,7 +62,7 @@ export async function GET(request: NextRequest) {
     const countResult = await db
       .select({ count: sql<number>`count(*)` })
       .from(schema.runs)
-      .where(inArray(schema.runs.status, ["completed", "failed"]));
+      .where(statusFilter);
 
     const total = countResult[0]?.count || 0;
 
@@ -61,8 +83,6 @@ export async function GET(request: NextRequest) {
       ...run,
       artifacts: artifacts.filter((a) => a.run_id === run.id),
     }));
-
-    void session; // workspace filtering comes in a later phase
 
     return NextResponse.json({
       runs: runsWithArtifacts,
