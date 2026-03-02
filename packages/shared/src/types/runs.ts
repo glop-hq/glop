@@ -41,6 +41,7 @@ export interface Run {
   repo_key: string;
   branch_name: string;
   session_id: string | null;
+  slug: string | null;
   status: RunStatus;
   phase: RunPhase;
   activity_kind: ActivityKind;

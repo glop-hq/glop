@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import type { HistoryResponse, Run, ArtifactInfo } from "@glop/shared";
-import { PhaseBadge } from "./phase-badge";
-import { StatusBadge } from "./status-badge";
+import type { HistoryResponse, Run } from "@glop/shared";
+import { ColumnHeader, type SortDir } from "./column-header";
+import { RelativeTime } from "./relative-time";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Clock } from "lucide-react";
+import { RefreshCw, Clock, FolderGit2, GitBranch, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatDuration(startedAt: string, completedAt: string | null): string {
@@ -21,16 +21,63 @@ function formatDuration(startedAt: string, completedAt: string | null): string {
   return `${(diffMs / 3600000).toFixed(1)}h`;
 }
 
-export function HistoryTable() {
+const statusRowClass: Record<string, string> = {
+  active: "",
+  blocked: "bg-amber-50/50",
+  stale: "opacity-60",
+  completed: "opacity-70",
+  failed: "bg-red-50/30",
+};
+
+const statusDotClass: Record<string, string> = {
+  active: "bg-green-500 animate-pulse",
+  blocked: "bg-amber-500",
+  stale: "bg-gray-400",
+  completed: "bg-gray-400",
+  failed: "bg-red-500",
+};
+
+type SortField = "developer" | "repo" | "title" | "duration" | "completed";
+
+interface SortState {
+  field: SortField | null;
+  dir: SortDir;
+}
+
+interface FilterState {
+  developer: Set<string>;
+  repo: Set<string>;
+}
+
+function getDeveloperName(run: Run): string {
+  return run.git_user_name || run.developer_id.slice(0, 8);
+}
+
+function getDurationMs(run: Run): number {
+  if (!run.completed_at) return 0;
+  return new Date(run.completed_at).getTime() - new Date(run.started_at).getTime();
+}
+
+interface HistoryTableProps {
+  scope: "mine" | "team";
+}
+
+export function HistoryTable({ scope }: HistoryTableProps) {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [sort, setSort] = useState<SortState>({ field: "completed", dir: "desc" });
+  const [filters, setFilters] = useState<FilterState>({
+    developer: new Set(),
+    repo: new Set(),
+  });
   const router = useRouter();
 
   const fetchData = useCallback(async (showRefresh = false) => {
     if (showRefresh) setRefreshing(true);
+    else setLoading(true);
     try {
-      const res = await fetch("/api/v1/history?limit=50");
+      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -40,15 +87,94 @@ export function HistoryTable() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [scope]);
 
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
+  const setFilterField = useCallback(
+    (field: keyof FilterState) => (values: Set<string>) => {
+      setFilters((prev) => ({ ...prev, [field]: values }));
+    },
+    []
+  );
+
+  const handleSort = useCallback(
+    (field: SortField) => (dir: SortDir) => {
+      setSort(dir ? { field, dir } : { field: null, dir: null });
+    },
+    []
+  );
+
+  const filterOptions = useMemo(() => {
+    if (!data) return { developers: [], repos: [] };
+    const developers = [...new Set(data.runs.map(getDeveloperName))].sort();
+    const repos = [...new Set(data.runs.map((r) => r.repo_key))].sort();
+    return { developers, repos };
+  }, [data]);
+
+  const filteredRuns = useMemo(() => {
+    if (!data) return [];
+    let runs = data.runs;
+
+    if (filters.developer.size > 0) {
+      runs = runs.filter((r) => filters.developer.has(getDeveloperName(r)));
+    }
+    if (filters.repo.size > 0) {
+      runs = runs.filter((r) => filters.repo.has(r.repo_key));
+    }
+
+    if (sort.field && sort.dir) {
+      const dir = sort.dir === "asc" ? 1 : -1;
+      runs = [...runs].sort((a, b) => {
+        switch (sort.field) {
+          case "developer":
+            return dir * getDeveloperName(a).localeCompare(getDeveloperName(b));
+          case "repo":
+            return dir * a.repo_key.localeCompare(b.repo_key);
+          case "title":
+            return dir * (a.title || "").localeCompare(b.title || "");
+          case "duration":
+            return dir * (getDurationMs(a) - getDurationMs(b));
+          case "completed":
+            return (
+              dir *
+              (new Date(a.completed_at || a.last_event_at).getTime() -
+                new Date(b.completed_at || b.last_event_at).getTime())
+            );
+          default:
+            return 0;
+        }
+      });
+    }
+
+    return runs;
+  }, [data, filters, sort]);
+
+  // Collect active filter chips
+  const activeChips: { label: string; field: keyof FilterState; value: string }[] = [];
+  for (const value of filters.developer) activeChips.push({ label: value, field: "developer", value });
+  for (const value of filters.repo) activeChips.push({ label: value, field: "repo", value });
+
+  const clearAllFilters = useCallback(() => {
+    setFilters({ developer: new Set(), repo: new Set() });
+  }, []);
+
+  const removeChip = useCallback(
+    (field: keyof FilterState, value: string) => {
+      setFilters((prev) => {
+        const next = new Set(prev[field]);
+        next.delete(value);
+        return { ...prev, [field]: next };
+      });
+    },
+    []
+  );
+
   if (loading) {
     return (
-      <div className="space-y-2 p-4">
+      <div className="rounded-lg border bg-card p-4 space-y-2">
         {Array.from({ length: 5 }).map((_, i) => (
           <Skeleton key={i} className="h-10 w-full" />
         ))}
@@ -57,16 +183,20 @@ export function HistoryTable() {
   }
 
   return (
-    <div>
+    <>
+      {/* Toolbar — rendered outside the card by the parent */}
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-muted-foreground">
-          {data?.total || 0} completed runs
+          {filteredRuns.length}
+          {filteredRuns.length !== (data?.runs.length ?? 0) && ` of ${data?.runs.length}`}
+          {" "}{scope === "mine" ? "private" : "shared"} runs
         </p>
         <Button
           variant="outline"
           size="sm"
           onClick={() => fetchData(true)}
           disabled={refreshing}
+          className="cursor-pointer"
         >
           <RefreshCw
             className={cn("h-3.5 w-3.5 mr-1", refreshing && "animate-spin")}
@@ -75,72 +205,164 @@ export function HistoryTable() {
         </Button>
       </div>
 
-      {!data || data.runs.length === 0 ? (
-        <div className="flex flex-col items-center justify-center p-16 text-muted-foreground">
-          <Clock className="h-8 w-8 mb-3 opacity-40" />
-          <p className="text-sm">No completed runs yet</p>
-        </div>
-      ) : (
+      <div className="rounded-lg border bg-card">
+        {/* Active filter chips */}
+        {activeChips.length > 0 && (
+          <div className="flex items-center gap-1.5 px-4 py-2 border-b">
+            <span className="text-xs text-muted-foreground mr-1">Filters:</span>
+            {activeChips.map((chip) => (
+              <button
+                key={`${chip.field}-${chip.value}`}
+                onClick={() => removeChip(chip.field, chip.value)}
+                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full bg-accent text-accent-foreground hover:bg-accent/80 transition-colors cursor-pointer"
+              >
+                {chip.label}
+                <X className="h-3 w-3" />
+              </button>
+            ))}
+            <button
+              onClick={clearAllFilters}
+              className="text-xs text-muted-foreground hover:text-foreground ml-1 transition-colors cursor-pointer"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+
+        {!data || data.runs.length === 0 ? (
+          <div className="flex flex-col items-center justify-center p-16 text-muted-foreground">
+            <Clock className="h-8 w-8 mb-3 opacity-40" />
+            <p className="text-sm">
+              {scope === "mine"
+                ? "No private runs yet"
+                : "No runs shared with the workspace yet"}
+            </p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="w-full table-fixed">
+            <colgroup>
+              <col className="w-8" />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "25%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "18%" }} />
+            </colgroup>
             <thead>
               <tr className="border-b bg-muted/30">
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Developer
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Repo / Branch
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Title
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Duration
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Completed
-                </th>
-                <th className="px-4 py-2.5 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Status
-                </th>
+                <th className="pl-4 pr-2" />
+                <ColumnHeader
+                  label="Developer"
+                  sortDir={sort.field === "developer" ? sort.dir : null}
+                  onSort={handleSort("developer")}
+                  filterValues={filterOptions.developers}
+                  selectedFilters={filters.developer}
+                  onFilterChange={setFilterField("developer")}
+                />
+                <ColumnHeader
+                  label="Repo / Branch"
+                  sortDir={sort.field === "repo" ? sort.dir : null}
+                  onSort={handleSort("repo")}
+                  filterValues={filterOptions.repos}
+                  selectedFilters={filters.repo}
+                  onFilterChange={setFilterField("repo")}
+                />
+                <ColumnHeader
+                  label="Title"
+                  sortDir={sort.field === "title" ? sort.dir : null}
+                  onSort={handleSort("title")}
+                />
+                <ColumnHeader
+                  label="Duration"
+                  sortDir={sort.field === "duration" ? sort.dir : null}
+                  onSort={handleSort("duration")}
+                />
+                <ColumnHeader
+                  label="Completed"
+                  sortDir={sort.field === "completed" ? sort.dir : null}
+                  onSort={handleSort("completed")}
+                  align="right"
+                />
               </tr>
             </thead>
             <tbody>
-              {data.runs.map((run) => (
+              {filteredRuns.map((run) => (
                 <tr
                   key={run.id}
-                  className="border-b cursor-pointer transition-colors hover:bg-muted/50"
+                  className={cn(
+                    "border-b cursor-pointer transition-colors hover:bg-muted/50",
+                    statusRowClass[run.status]
+                  )}
                   onClick={() => router.push(`/runs/${run.id}`)}
                 >
-                  <td className="px-4 py-3 text-sm">
-                    {run.git_user_name || run.developer_id.slice(0, 8)}
+                  {/* Status dot */}
+                  <td className="pl-4 pr-2 py-3 w-8 align-middle text-center">
+                    <span
+                      className={cn("inline-block h-2.5 w-2.5 rounded-full", statusDotClass[run.status])}
+                      title={run.status}
+                    />
                   </td>
+
+                  {/* Developer */}
+                  <td className="pl-2 pr-4 py-3">
+                    <div className="font-medium text-sm truncate">
+                      {run.git_user_name || run.developer_id.slice(0, 8)}
+                    </div>
+                    {run.git_user_email && (
+                      <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {run.git_user_email}
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Repo / Branch */}
                   <td className="px-4 py-3">
-                    <span className="text-sm font-mono">{run.repo_key}</span>
-                    <span className="text-xs text-muted-foreground ml-1">
-                      {run.branch_name}
-                    </span>
+                    <div className="flex items-center gap-1.5 text-sm font-mono truncate">
+                      <FolderGit2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="truncate">{run.repo_key}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                      <GitBranch className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{run.branch_name}</span>
+                    </div>
                   </td>
-                  <td className="px-4 py-3 text-sm">
+
+                  {/* Title */}
+                  <td className="px-4 py-3 text-sm truncate">
                     {run.title || "-"}
                   </td>
+
+                  {/* Duration */}
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {formatDuration(run.started_at, run.completed_at)}
                   </td>
+
+                  {/* Completed */}
                   <td className="px-4 py-3 text-sm text-muted-foreground">
-                    {run.completed_at
-                      ? new Date(run.completed_at).toLocaleDateString()
-                      : "-"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={run.status} />
+                    {run.completed_at ? (
+                      <RelativeTime date={run.completed_at} />
+                    ) : (
+                      "-"
+                    )}
                   </td>
                 </tr>
               ))}
+              {filteredRuns.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    No runs match the current filters
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
