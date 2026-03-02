@@ -22,7 +22,7 @@ export function NavHeader() {
   const currentWorkspace = workspaces[0];
 
   return (
-    <header className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="relative z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
         <Link href="/live" className="mr-4 flex items-center gap-2">
           <span className="text-lg font-bold tracking-tight">glop</span>
