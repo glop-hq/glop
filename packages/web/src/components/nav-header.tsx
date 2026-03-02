@@ -10,7 +10,7 @@ import type { SessionWorkspace } from "@/lib/session";
 
 const navItems = [
   { href: "/live", label: "Live Now", icon: Radio },
-  { href: "/history", label: "Past Runs", icon: Clock },
+  { href: "/history", label: "History", icon: Clock },
 ];
 
 export function NavHeader() {

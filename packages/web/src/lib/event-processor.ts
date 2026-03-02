@@ -8,6 +8,7 @@ import {
   type ClassifiedActivity,
 } from "@glop/shared";
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
+import { extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -233,6 +234,49 @@ export async function processHook(
       ...(rawPayload.slug ? { slug: rawPayload.slug } : {}),
     },
   });
+
+  // Extract commit/PR artifacts from PostToolUse Bash commands
+  if (
+    hookType === "PostToolUse" &&
+    rawPayload.tool_name === "Bash" &&
+    typeof rawPayload.tool_response === "string"
+  ) {
+    const command =
+      typeof (rawPayload.tool_input as Record<string, unknown>)?.command === "string"
+        ? (rawPayload.tool_input as Record<string, unknown>).command as string
+        : "";
+    const output = rawPayload.tool_response as string;
+
+    const commit = extractCommitArtifact(command, output, ctx.repo_key);
+    if (commit) {
+      await db.insert(schema.artifacts).values({
+        id: generateId(),
+        run_id: runId,
+        artifact_type: "commit",
+        url: commit.url,
+        label: commit.label,
+        external_id: commit.external_id,
+        state: null,
+        metadata: {},
+        created_at: now,
+      });
+    }
+
+    const pr = extractPrArtifact(command, output);
+    if (pr) {
+      await db.insert(schema.artifacts).values({
+        id: generateId(),
+        run_id: runId,
+        artifact_type: "pr",
+        url: pr.url,
+        label: pr.label,
+        external_id: pr.external_id,
+        state: "open",
+        metadata: {},
+        created_at: now,
+      });
+    }
+  }
 
   return { run_id: runId, event_id: eventId };
 }
