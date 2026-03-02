@@ -8,7 +8,7 @@ import { NavHeader } from "@/components/nav-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
@@ -39,12 +39,103 @@ export default function WorkspaceSettingsPage() {
           <h1 className="text-xl font-semibold">Workspace Settings</h1>
           <p className="text-sm text-muted-foreground mt-1">{workspace.name}</p>
         </div>
+        {workspace.role === "admin" && (
+          <GeneralSection workspaceId={workspace.id} workspaceName={workspace.name} />
+        )}
         <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
         {workspace.role === "admin" && (
           <InviteLinkSection workspaceId={workspace.id} />
         )}
       </main>
     </div>
+  );
+}
+
+function GeneralSection({
+  workspaceId,
+  workspaceName,
+}: {
+  workspaceId: string;
+  workspaceName: string;
+}) {
+  const { update: updateSession } = useSession();
+  const [name, setName] = useState(workspaceName);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const isDirty = name.trim() !== workspaceName;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !isDirty) return;
+
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      await updateSession();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Settings className="h-4 w-4" />
+          General
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSave} className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Workspace name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm"
+              required
+              maxLength={100}
+            />
+          </div>
+          <Button
+            type="submit"
+            size="sm"
+            className="cursor-pointer"
+            disabled={saving || !isDirty || !name.trim()}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : saved ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </form>
+        {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+      </CardContent>
+    </Card>
   );
 }
 
