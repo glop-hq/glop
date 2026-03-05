@@ -36,6 +36,20 @@
       "when": 1772415237527,
       "tag": "0004_purple_sister_grimm",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1772740555255,
+      "tag": "0005_eager_nightshade",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1772743991941,
+      "tag": "0006_tranquil_clea",
+      "breakpoints": true
     }
   ]
 }

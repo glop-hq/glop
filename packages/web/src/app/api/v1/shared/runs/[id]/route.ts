@@ -1,28 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
-import { hashShareToken } from "@/lib/share-tokens";
 import { redactEventPayload, type Run, type Event, type ArtifactInfo } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
-  request: NextRequest,
+  _request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { id: runId } = await params;
-    const token = request.nextUrl.searchParams.get("token");
-
-    if (!token) {
-      return NextResponse.json(
-        { error: "Share token required", code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
 
     const db = getDb();
-    const tokenHash = hashShareToken(token);
 
     // Fetch the run
     const runs = await db
@@ -40,25 +30,11 @@ export async function GET(
 
     const run = runs[0] as unknown as Run;
 
-    // Validate share link
-    if (run.visibility !== "shared_link") {
-      return NextResponse.json(
-        { error: "Run is not shared", code: "NOT_FOUND" },
-        { status: 404 }
-      );
-    }
-
+    // Validate share link is active
     if (run.shared_link_state !== "active") {
       return NextResponse.json(
-        { error: "Share link has been revoked", code: "NOT_FOUND" },
+        { error: "Share link is not active", code: "NOT_FOUND" },
         { status: 404 }
-      );
-    }
-
-    if (run.shared_link_token_hash !== tokenHash) {
-      return NextResponse.json(
-        { error: "Invalid share token", code: "UNAUTHORIZED" },
-        { status: 401 }
       );
     }
 

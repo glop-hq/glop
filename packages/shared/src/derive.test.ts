@@ -29,8 +29,6 @@ function makeRun(overrides: Partial<Run> = {}): Run {
     file_count: 0,
     files_touched: [],
     visibility: "private",
-    shared_link_id: null,
-    shared_link_token_hash: null,
     shared_link_state: null,
     shared_link_expires_at: null,
     share_created_at: null,

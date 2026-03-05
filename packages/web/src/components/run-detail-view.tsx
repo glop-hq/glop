@@ -15,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RunVisibility, Run, RunStatus } from "@glop/shared";
+import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
 
 const statusDotClass: Record<RunStatus, string> = {
@@ -37,7 +37,8 @@ export function RunDetailView({ runId }: { runId: string }) {
   const { data, error, loading } = useRunDetail(runId);
   const { data: session } = useSession();
   const router = useRouter();
-  const [visibility, setVisibility] = useState<RunVisibility | null>(null);
+  const [visibility, setVisibility] = useState<"private" | "workspace" | null>(null);
+  const [sharedLinkActive, setSharedLinkActive] = useState<boolean | null>(null);
 
   if (loading) {
     return (
@@ -58,7 +59,14 @@ export function RunDetailView({ runId }: { runId: string }) {
   }
 
   const { run, events, artifacts } = data;
-  const currentVisibility = visibility ?? run.visibility;
+  const currentVisibility = visibility ?? (run.visibility === "workspace" ? "workspace" : "private");
+  const currentLinkActive = sharedLinkActive ?? (run.shared_link_state === "active");
+
+  const handleShareChange = (resp: ShareRunResponse) => {
+    setVisibility(resp.visibility);
+    setSharedLinkActive(resp.shared_link_active);
+  };
+
   const workspaces = (
     (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
   ) || [];
@@ -102,16 +110,22 @@ export function RunDetailView({ runId }: { runId: string }) {
               {run.file_count} files
             </span>
           </div>
+          {artifacts.length > 0 && (
+            <div className="mt-2">
+              <ArtifactBadges artifacts={artifacts} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {run.status !== "completed" && run.status !== "failed" && (
             <PhaseBadge phase={run.phase} />
           )}
-          <VisibilityBadge visibility={currentVisibility} />
+          <VisibilityBadge visibility={currentVisibility} sharedLinkActive={currentLinkActive} />
           {showShare && (
             <ShareDialog
               run={{ ...run, visibility: currentVisibility }}
-              onVisibilityChange={setVisibility}
+              sharedLinkActive={currentLinkActive}
+              onShareChange={handleShareChange}
             />
           )}
         </div>
@@ -125,18 +139,6 @@ export function RunDetailView({ runId }: { runId: string }) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">{run.summary}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Artifacts */}
-      {artifacts.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Artifacts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ArtifactBadges artifacts={artifacts} />
           </CardContent>
         </Card>
       )}

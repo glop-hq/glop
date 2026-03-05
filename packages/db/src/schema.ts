@@ -186,8 +186,6 @@ export const runs = pgTable(
       .notNull()
       .default([]),
     visibility: runVisibilityEnum("visibility").notNull().default("private"),
-    shared_link_id: text("shared_link_id"),
-    shared_link_token_hash: text("shared_link_token_hash"),
     shared_link_state: sharedLinkStateEnum("shared_link_state"),
     shared_link_expires_at: timestamp("shared_link_expires_at", {
       mode: "string",
@@ -237,7 +235,6 @@ export const runs = pgTable(
     index("runs_workspace_id_idx").on(table.workspace_id),
     index("runs_owner_user_id_idx").on(table.owner_user_id),
     index("runs_visibility_idx").on(table.visibility),
-    index("runs_shared_link_id_idx").on(table.shared_link_id),
   ]
 );
 

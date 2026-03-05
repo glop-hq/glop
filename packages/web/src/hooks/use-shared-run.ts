@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import type { SharedRunDetailResponse } from "@glop/shared";
 
-export function useSharedRun(runId: string, token: string) {
+export function useSharedRun(runId: string) {
   const [data, setData] = useState<SharedRunDetailResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -11,9 +11,7 @@ export function useSharedRun(runId: string, token: string) {
   useEffect(() => {
     async function fetchSharedRun() {
       try {
-        const res = await fetch(
-          `/api/v1/shared/runs/${runId}?token=${encodeURIComponent(token)}`
-        );
+        const res = await fetch(`/api/v1/shared/runs/${runId}`);
         if (!res.ok) {
           const data = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
           throw new Error(data.error || `HTTP ${res.status}`);
@@ -29,7 +27,7 @@ export function useSharedRun(runId: string, token: string) {
     }
 
     fetchSharedRun();
-  }, [runId, token]);
+  }, [runId]);
 
   return { data, error, loading };
 }

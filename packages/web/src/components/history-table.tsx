@@ -312,7 +312,7 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                     <div className="truncate">{run.title || "-"}</div>
                     {run.artifacts && run.artifacts.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {run.artifacts.map((a) => {
+                        {[...run.artifacts].sort((a, b) => (a.artifact_type === "pr" ? -1 : b.artifact_type === "pr" ? 1 : 0)).map((a) => {
                           if (a.artifact_type === "commit") {
                             const content = (
                               <>

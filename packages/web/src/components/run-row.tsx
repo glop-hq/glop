@@ -71,17 +71,19 @@ export function RunRow({
         </div>
       </td>
 
-      {/* Activity: phase badge + last action + artifact icons */}
+      {/* Activity: phase badge + last action + artifact pills */}
       <td className="px-4 py-3">
         <div className="flex items-center gap-2">
           <PhaseBadge phase={run.phase} />
-          {artifacts.length > 0 && (
-            <ArtifactBadges artifacts={artifacts} />
-          )}
         </div>
         {run.last_action_label && (
-          <div className="text-xs text-muted-foreground mt-1">
+          <div className="text-xs text-muted-foreground mt-1 truncate">
             {run.last_action_label}
+          </div>
+        )}
+        {artifacts.length > 0 && (
+          <div className="mt-1">
+            <ArtifactBadges artifacts={artifacts} />
           </div>
         )}
       </td>

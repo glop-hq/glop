@@ -214,42 +214,69 @@ export async function processHook(
   if (
     hookType === "PostToolUse" &&
     rawPayload.tool_name === "Bash" &&
-    typeof rawPayload.tool_response === "string"
+    rawPayload.tool_response != null
   ) {
     const command =
       typeof (rawPayload.tool_input as Record<string, unknown>)?.command === "string"
         ? (rawPayload.tool_input as Record<string, unknown>).command as string
         : "";
-    const output = rawPayload.tool_response as string;
+    const resp = rawPayload.tool_response as string | Record<string, unknown>;
+    const output = typeof resp === "string" ? resp : typeof resp.stdout === "string" ? resp.stdout : "";
 
     const commit = extractCommitArtifact(command, output, ctx.repo_key);
     if (commit) {
-      await db.insert(schema.artifacts).values({
-        id: generateId(),
-        run_id: runId,
-        artifact_type: "commit",
-        url: commit.url,
-        label: commit.label,
-        external_id: commit.external_id,
-        state: null,
-        metadata: {},
-        created_at: now,
-      });
+      const existing = await db
+        .select({ id: schema.artifacts.id })
+        .from(schema.artifacts)
+        .where(
+          and(
+            eq(schema.artifacts.run_id, runId),
+            eq(schema.artifacts.artifact_type, "commit"),
+            eq(schema.artifacts.external_id, commit.external_id)
+          )
+        )
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(schema.artifacts).values({
+          id: generateId(),
+          run_id: runId,
+          artifact_type: "commit",
+          url: commit.url,
+          label: commit.label,
+          external_id: commit.external_id,
+          state: null,
+          metadata: {},
+          created_at: now,
+        });
+      }
     }
 
     const pr = extractPrArtifact(command, output);
     if (pr) {
-      await db.insert(schema.artifacts).values({
-        id: generateId(),
-        run_id: runId,
-        artifact_type: "pr",
-        url: pr.url,
-        label: pr.label,
-        external_id: pr.external_id,
-        state: "open",
-        metadata: {},
-        created_at: now,
-      });
+      const existing = await db
+        .select({ id: schema.artifacts.id })
+        .from(schema.artifacts)
+        .where(
+          and(
+            eq(schema.artifacts.run_id, runId),
+            eq(schema.artifacts.artifact_type, "pr"),
+            eq(schema.artifacts.external_id, pr.external_id)
+          )
+        )
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(schema.artifacts).values({
+          id: generateId(),
+          run_id: runId,
+          artifact_type: "pr",
+          url: pr.url,
+          label: pr.label,
+          external_id: pr.external_id,
+          state: "open",
+          metadata: {},
+          created_at: now,
+        });
+      }
     }
   }
 

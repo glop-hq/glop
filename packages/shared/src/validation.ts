@@ -101,8 +101,6 @@ export const historyQuerySchema = z.object({
 
 export const runVisibilitySchema = z.enum(["private", "workspace", "shared_link"]);
 
-export const sharedLinkStateSchema = z.enum(["active", "revoked"]);
-
 export const memberRoleSchema = z.enum(["admin", "member"]);
 
 export const workspaceCreateSchema = z.object({
@@ -127,8 +125,15 @@ export const memberInviteSchema = z.object({
   role: memberRoleSchema.default("member"),
 });
 
+export const shareActionSchema = z.enum([
+  "share_workspace",
+  "unshare_workspace",
+  "create_link",
+  "revoke_link",
+]);
+
 export const shareRunSchema = z.object({
-  visibility: runVisibilitySchema,
+  action: shareActionSchema,
   expires_in_days: z.number().int().min(1).max(365).optional(),
 });
 

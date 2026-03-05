@@ -93,18 +93,15 @@ export interface AuthMeResponse {
 }
 
 export interface ShareRunRequest {
-  visibility: "private" | "workspace" | "shared_link";
+  action: "share_workspace" | "unshare_workspace" | "create_link" | "revoke_link";
   expires_in_days?: number;
 }
 
 export interface ShareRunResponse {
-  visibility: "private" | "workspace" | "shared_link";
+  visibility: "private" | "workspace";
+  shared_link_active: boolean;
   shared_link_url?: string;
-  expires_at?: string;
-}
-
-export interface RevokeShareResponse {
-  visibility: "private";
+  shared_link_expires_at?: string;
 }
 
 export interface SharedRunDetailResponse {

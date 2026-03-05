@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, inArray, and, eq, or, ne } from "drizzle-orm";
+import { desc, inArray, and, eq, or } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { sweepStaleRuns } from "@/lib/stale-checker";
@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
 
     const fiveMinutesAgoMs = Date.now() - 5 * 60 * 1000;
 
-    // Only show runs owned by the current user OR non-private runs
+    // Only show runs owned by the current user OR workspace-shared runs
     const visibilityFilter = or(
       eq(schema.runs.owner_user_id, session.user_id),
-      ne(schema.runs.visibility, "private")
+      eq(schema.runs.visibility, "workspace")
     );
 
     // Get active runs filtered by workspace membership

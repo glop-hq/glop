@@ -3,7 +3,6 @@ import {
   authRegisterSchema,
   historyQuerySchema,
   runVisibilitySchema,
-  sharedLinkStateSchema,
   memberRoleSchema,
   workspaceCreateSchema,
   workspaceUpdateSchema,
@@ -74,16 +73,6 @@ describe("runVisibilitySchema", () => {
 
   it("rejects invalid value", () => {
     expect(runVisibilitySchema.safeParse("public").success).toBe(false);
-  });
-});
-
-describe("sharedLinkStateSchema", () => {
-  it.each(["active", "revoked"])("accepts %s", (val) => {
-    expect(sharedLinkStateSchema.safeParse(val).success).toBe(true);
-  });
-
-  it("rejects invalid value", () => {
-    expect(sharedLinkStateSchema.safeParse("expired").success).toBe(false);
   });
 });
 
@@ -177,22 +166,34 @@ describe("memberInviteSchema", () => {
 });
 
 describe("shareRunSchema", () => {
-  it("accepts valid share config", () => {
+  it("accepts valid share action with expires_in_days", () => {
     const result = shareRunSchema.safeParse({
-      visibility: "shared_link",
+      action: "create_link",
       expires_in_days: 7,
     });
     expect(result.success).toBe(true);
   });
 
-  it("accepts without expires_in_days", () => {
-    const result = shareRunSchema.safeParse({ visibility: "private" });
+  it("accepts action without expires_in_days", () => {
+    const result = shareRunSchema.safeParse({ action: "share_workspace" });
     expect(result.success).toBe(true);
+  });
+
+  it("accepts all valid actions", () => {
+    for (const action of ["share_workspace", "unshare_workspace", "create_link", "revoke_link"]) {
+      const result = shareRunSchema.safeParse({ action });
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it("rejects invalid action", () => {
+    const result = shareRunSchema.safeParse({ action: "delete" });
+    expect(result.success).toBe(false);
   });
 
   it("rejects expires_in_days over 365", () => {
     const result = shareRunSchema.safeParse({
-      visibility: "shared_link",
+      action: "create_link",
       expires_in_days: 366,
     });
     expect(result.success).toBe(false);
@@ -200,7 +201,7 @@ describe("shareRunSchema", () => {
 
   it("rejects expires_in_days of 0", () => {
     const result = shareRunSchema.safeParse({
-      visibility: "shared_link",
+      action: "create_link",
       expires_in_days: 0,
     });
     expect(result.success).toBe(false);

@@ -1,7 +1,6 @@
 "use client";
 
 import { use } from "react";
-import { useSearchParams } from "next/navigation";
 import { useSharedRun } from "@/hooks/use-shared-run";
 import { SharedRunView } from "@/components/shared-run-view";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,23 +12,7 @@ export default function SharedRunPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-
-  if (!token) {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
-        <AlertTriangle className="h-8 w-8" />
-        <p className="text-sm">Missing share token</p>
-      </div>
-    );
-  }
-
-  return <SharedRunContent runId={id} token={token} />;
-}
-
-function SharedRunContent({ runId, token }: { runId: string; token: string }) {
-  const { data, error, loading } = useSharedRun(runId, token);
+  const { data, error, loading } = useSharedRun(id);
 
   if (loading) {
     return (

@@ -44,9 +44,6 @@ export const STATUS_COLORS: Record<string, string> = {
 /** Default share link expiry in days */
 export const DEFAULT_SHARE_EXPIRY_DAYS = 30;
 
-/** Number of random bytes for share token generation */
-export const SHARE_TOKEN_BYTES = 32;
-
 /** Invitation expiry in days */
 export const INVITATION_EXPIRY_DAYS = 7;
 
