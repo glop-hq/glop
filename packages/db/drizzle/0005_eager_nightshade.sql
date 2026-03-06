@@ -1,1 +1,0 @@
-ALTER TABLE "runs" ADD COLUMN "shared_link_token" text;

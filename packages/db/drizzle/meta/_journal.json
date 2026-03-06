@@ -5,57 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1772236663422,
-      "tag": "0000_outgoing_rattler",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1772253994055,
-      "tag": "0001_bent_the_leader",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1772300906801,
-      "tag": "0002_long_norman_osborn",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1772337625988,
-      "tag": "0003_cold_kate_bishop",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1772415237527,
-      "tag": "0004_purple_sister_grimm",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1772740555255,
-      "tag": "0005_eager_nightshade",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1772743991941,
-      "tag": "0006_tranquil_clea",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1772779428300,
-      "tag": "0007_perfect_tarot",
+      "when": 1772827671031,
+      "tag": "0000_large_earthquake",
       "breakpoints": true
     }
   ]
