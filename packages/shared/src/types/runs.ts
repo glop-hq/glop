@@ -28,7 +28,7 @@ export type ActivityKind =
   | "blocked"
   | "unknown";
 
-export type RunVisibility = "private" | "workspace" | "shared_link";
+export type RunVisibility = "private" | "workspace";
 
 export type SharedLinkState = "active" | "revoked";
 

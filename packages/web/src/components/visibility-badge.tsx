@@ -1,47 +1,58 @@
 import { Lock, Users, Link2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import type { RunVisibility } from "@glop/shared";
+
 interface VisibilityBadgeProps {
-  visibility: "private" | "workspace";
-  sharedLinkActive: boolean;
+  visibility: RunVisibility;
+  sharedLinkActive?: boolean;
+  iconOnly?: boolean;
 }
 
 function Badge({
   icon: Icon,
   label,
   className,
+  iconOnly,
 }: {
   icon: typeof Lock;
   label: string;
   className: string;
+  iconOnly?: boolean;
 }) {
   return (
     <span
       className={cn(
-        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium",
+        "inline-flex items-center gap-1 rounded-full text-xs font-medium",
+        iconOnly ? "p-1" : "px-2 py-0.5",
         className
       )}
+      title={iconOnly ? label : undefined}
     >
       <Icon className="h-3 w-3" />
-      {label}
+      {!iconOnly && label}
     </span>
   );
 }
 
-export function VisibilityBadge({ visibility, sharedLinkActive }: VisibilityBadgeProps) {
+export function VisibilityBadge({ visibility, sharedLinkActive, iconOnly }: VisibilityBadgeProps) {
   const isWorkspace = visibility === "workspace";
+  const hasLink = sharedLinkActive ?? false;
 
-  if (!isWorkspace && !sharedLinkActive) {
-    return <Badge icon={Lock} label="Private" className="bg-gray-100 text-gray-600" />;
+  if (!isWorkspace && !hasLink) {
+    return <Badge icon={Lock} label="Private" className="bg-gray-100 text-gray-600" iconOnly={iconOnly} />;
   }
 
   return (
     <span className="inline-flex items-center gap-1">
       {isWorkspace && (
-        <Badge icon={Users} label="Team" className="bg-blue-50 text-blue-600" />
+        <Badge icon={Users} label="Team" className="bg-blue-50 text-blue-600" iconOnly={iconOnly} />
       )}
-      {sharedLinkActive && (
-        <Badge icon={Link2} label="Link" className="bg-green-50 text-green-600" />
+      {!isWorkspace && hasLink && (
+        <Badge icon={Lock} label="Private" className="bg-gray-100 text-gray-600" iconOnly={iconOnly} />
+      )}
+      {hasLink && (
+        <Badge icon={Link2} label="Link" className="bg-green-50 text-green-600" iconOnly={iconOnly} />
       )}
     </span>
   );

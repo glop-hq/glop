@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { desc, inArray, and, sql, eq, ne } from "drizzle-orm";
+import { desc, inArray, and, or, sql, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { historyQuerySchema } from "@glop/shared";
@@ -14,11 +14,9 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const rawOffset = searchParams.get("offset");
     const rawLimit = searchParams.get("limit");
-    const rawScope = searchParams.get("scope");
     const parsed = historyQuerySchema.safeParse({
       offset: rawOffset ?? undefined,
       limit: rawLimit ?? undefined,
-      scope: rawScope ?? undefined,
     });
 
     if (!parsed.success) {
@@ -28,7 +26,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { offset, limit, scope } = parsed.data;
+    const { offset, limit } = parsed.data;
     const db = getDb();
 
     const allWorkspaceIds = session.workspaces.map((w) => w.id);
@@ -43,20 +41,16 @@ export async function GET(request: NextRequest) {
         ? [requestedId]
         : allWorkspaceIds;
 
-    const baseConditions = [
+    // Show workspace-shared runs from anyone + all of my own runs
+    const statusFilter = and(
       inArray(schema.runs.status, ["completed", "failed"]),
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.owner_user_id} IS NOT NULL`,
-    ];
-
-    if (scope === "mine") {
-      baseConditions.push(eq(schema.runs.owner_user_id, session.user_id));
-      baseConditions.push(eq(schema.runs.visibility, "private"));
-    } else if (scope === "team") {
-      baseConditions.push(eq(schema.runs.visibility, "workspace"));
-    }
-
-    const statusFilter = and(...baseConditions);
+      or(
+        eq(schema.runs.visibility, "workspace"),
+        eq(schema.runs.owner_user_id, session.user_id),
+      ),
+    );
 
     const runs = await db
       .select()

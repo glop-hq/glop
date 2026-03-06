@@ -85,7 +85,6 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
 export const runVisibilityEnum = pgEnum("run_visibility", [
   "private",
   "workspace",
-  "shared_link",
 ]);
 
 export const sharedLinkStateEnum = pgEnum("shared_link_state", [

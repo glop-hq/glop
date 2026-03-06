@@ -50,6 +50,13 @@
       "when": 1772743991941,
       "tag": "0006_tranquil_clea",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1772779428300,
+      "tag": "0007_perfect_tarot",
+      "breakpoints": true
     }
   ]
 }

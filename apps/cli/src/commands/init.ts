@@ -22,6 +22,27 @@ export const initCommand = new Command("init")
       process.exit(1);
     }
 
+    // Verify the API key is still valid
+    try {
+      const res = await fetch(`${config.server_url}/api/v1/health`, {
+        headers: {
+          Authorization: `Bearer ${config.api_key}`,
+          "X-Machine-Id": config.machine_id,
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.status === 401) {
+        console.error("API key is invalid or expired. Run `glop auth` again.");
+        process.exit(1);
+      }
+      if (!res.ok) {
+        console.error(`Server error: HTTP ${res.status}. Try again later.`);
+        process.exit(1);
+      }
+    } catch {
+      console.warn(`Warning: Cannot reach ${config.server_url}. Key validation skipped.`);
+    }
+
     // Verify glop is in PATH so hooks will actually fire
     try {
       execSync("which glop", { stdio: ["pipe", "pipe", "pipe"] });

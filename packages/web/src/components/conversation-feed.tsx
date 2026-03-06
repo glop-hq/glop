@@ -150,6 +150,29 @@ function getToolIcon(toolName: string | undefined, activityKind: string | undefi
   return <Cog className="h-3.5 w-3.5" />;
 }
 
+function TruncatableBlock({ content, limit, children }: {
+  content: string;
+  limit: number;
+  children: (text: string) => React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  const isTruncated = content.length > limit;
+  const display = expanded ? content : content.slice(0, limit);
+  return (
+    <>
+      {children(display)}
+      {isTruncated && (
+        <button
+          className="text-xs text-blue-600 hover:text-blue-800 mt-1 cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+        >
+          {expanded ? "Show less" : "Show more..."}
+        </button>
+      )}
+    </>
+  );
+}
+
 function extractFileShort(path: string): string {
   const parts = path.split("/");
   return parts.slice(-2).join("/");
@@ -200,9 +223,6 @@ function PromptBubble({ event, developerName }: { event: FeedEvent; developerNam
 
 function ResponseBubble({ event }: { event: FeedEvent }) {
   const content = event.content || "";
-  // Truncate very long responses for the feed view
-  const truncated = content.length > 2000;
-  const displayContent = truncated ? content.slice(0, 2000) : content;
 
   return (
     <div className="flex gap-3 items-start">
@@ -217,10 +237,9 @@ function ResponseBubble({ event }: { event: FeedEvent }) {
           </span>
         </div>
         <div className="bg-amber-50 border border-amber-100 rounded-lg rounded-tl-none px-4 py-3 prose prose-sm max-w-none prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-code:text-amber-800 prose-table:text-sm">
-          <Markdown remarkPlugins={[remarkGfm]}>{displayContent}</Markdown>
-          {truncated && (
-            <span className="text-xs text-muted-foreground"> ... (truncated)</span>
-          )}
+          <TruncatableBlock content={content} limit={2000}>
+            {(text) => <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>}
+          </TruncatableBlock>
         </div>
       </div>
     </div>
@@ -297,7 +316,6 @@ function SubagentDetail({ toolInput, toolResponse }: {
   toolInput: Record<string, unknown>;
   toolResponse?: string;
 }) {
-  const [expanded, setExpanded] = useState(false);
   const subagentType = (toolInput.subagent_type as string) || "subagent";
   const description = (toolInput.description as string) || "";
 
@@ -327,10 +345,6 @@ function SubagentDetail({ toolInput, toolResponse }: {
     responseText = toolResponse;
   }
 
-  const truncateLength = 600;
-  const isTruncated = responseText.length > truncateLength;
-  const displayText = expanded ? responseText : responseText.slice(0, truncateLength);
-
   return (
     <div className="space-y-2">
       {/* Header row: badge + description + stats */}
@@ -359,19 +373,10 @@ function SubagentDetail({ toolInput, toolResponse }: {
       {responseText && (
         <div className="bg-zinc-50 border rounded px-3 py-2 max-h-96 overflow-y-auto">
           <div className="prose prose-sm max-w-none prose-pre:bg-zinc-900 prose-pre:text-zinc-100 prose-code:text-zinc-700 text-xs">
-            <Markdown remarkPlugins={[remarkGfm]}>{displayText}</Markdown>
+            <TruncatableBlock content={responseText} limit={600}>
+              {(text) => <Markdown remarkPlugins={[remarkGfm]}>{text}</Markdown>}
+            </TruncatableBlock>
           </div>
-          {isTruncated && (
-            <button
-              className="text-xs text-blue-600 hover:text-blue-800 mt-1 cursor-pointer"
-              onClick={(e) => {
-                e.stopPropagation();
-                setExpanded(!expanded);
-              }}
-            >
-              {expanded ? "Show less" : "Show more..."}
-            </button>
-          )}
         </div>
       )}
     </div>
@@ -397,18 +402,30 @@ function ToolDetail({ toolName, toolInput, toolResponse }: {
         )}
         {oldStr && newStr && (
           <div className="text-xs font-mono mt-1 space-y-1">
-            <div className="bg-red-50 text-red-800 border border-red-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-              - {oldStr.slice(0, 500)}{oldStr.length > 500 ? "..." : ""}
-            </div>
-            <div className="bg-green-50 text-green-800 border border-green-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-              + {newStr.slice(0, 500)}{newStr.length > 500 ? "..." : ""}
-            </div>
+            <TruncatableBlock content={oldStr} limit={500}>
+              {(text) => (
+                <div className="bg-red-50 text-red-800 border border-red-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                  - {text}
+                </div>
+              )}
+            </TruncatableBlock>
+            <TruncatableBlock content={newStr} limit={500}>
+              {(text) => (
+                <div className="bg-green-50 text-green-800 border border-green-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                  + {text}
+                </div>
+              )}
+            </TruncatableBlock>
           </div>
         )}
         {content && !oldStr && (
-          <div className="text-xs font-mono bg-green-50 text-green-800 border border-green-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-            {content.slice(0, 500)}{content.length > 500 ? "..." : ""}
-          </div>
+          <TruncatableBlock content={content} limit={500}>
+            {(text) => (
+              <div className="text-xs font-mono bg-green-50 text-green-800 border border-green-100 rounded px-2 py-1 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                {text}
+              </div>
+            )}
+          </TruncatableBlock>
         )}
       </div>
     );
@@ -424,9 +441,13 @@ function ToolDetail({ toolName, toolInput, toolResponse }: {
           </div>
         )}
         {toolResponse && (
-          <div className="text-xs font-mono bg-zinc-800 text-zinc-300 rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-            {toolResponse.slice(0, 2000)}{toolResponse.length > 2000 ? "..." : ""}
-          </div>
+          <TruncatableBlock content={toolResponse} limit={2000}>
+            {(text) => (
+              <div className="text-xs font-mono bg-zinc-800 text-zinc-300 rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                {text}
+              </div>
+            )}
+          </TruncatableBlock>
         )}
       </div>
     );
@@ -438,9 +459,13 @@ function ToolDetail({ toolName, toolInput, toolResponse }: {
       <div className="space-y-1.5">
         {target && <span className="text-xs font-mono text-muted-foreground">{target}</span>}
         {toolResponse && (
-          <div className="text-xs font-mono bg-zinc-50 text-zinc-700 border rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-            {toolResponse.slice(0, 2000)}{toolResponse.length > 2000 ? "..." : ""}
-          </div>
+          <TruncatableBlock content={toolResponse} limit={2000}>
+            {(text) => (
+              <div className="text-xs font-mono bg-zinc-50 text-zinc-700 border rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+                {text}
+              </div>
+            )}
+          </TruncatableBlock>
         )}
       </div>
     );
@@ -453,9 +478,13 @@ function ToolDetail({ toolName, toolInput, toolResponse }: {
 
   // Generic fallback
   return toolResponse ? (
-    <div className="text-xs font-mono bg-zinc-50 text-zinc-700 border rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
-      {toolResponse.slice(0, 2000)}{toolResponse.length > 2000 ? "..." : ""}
-    </div>
+    <TruncatableBlock content={toolResponse} limit={2000}>
+      {(text) => (
+        <div className="text-xs font-mono bg-zinc-50 text-zinc-700 border rounded px-3 py-2 whitespace-pre-wrap break-all max-h-48 overflow-y-auto">
+          {text}
+        </div>
+      )}
+    </TruncatableBlock>
   ) : null;
 }
 

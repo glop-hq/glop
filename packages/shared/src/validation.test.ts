@@ -41,13 +41,13 @@ describe("historyQuerySchema", () => {
   it("uses defaults when empty", () => {
     const result = historyQuerySchema.safeParse({});
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ offset: 0, limit: 50, scope: "all" });
+    expect(result.data).toEqual({ offset: 0, limit: 50 });
   });
 
   it("coerces string numbers", () => {
     const result = historyQuerySchema.safeParse({ offset: "10", limit: "25" });
     expect(result.success).toBe(true);
-    expect(result.data).toEqual({ offset: 10, limit: 25, scope: "all" });
+    expect(result.data).toEqual({ offset: 10, limit: 25 });
   });
 
   it("rejects negative offset", () => {
@@ -67,7 +67,7 @@ describe("historyQuerySchema", () => {
 });
 
 describe("runVisibilitySchema", () => {
-  it.each(["private", "workspace", "shared_link"])("accepts %s", (val) => {
+  it.each(["private", "workspace"])("accepts %s", (val) => {
     expect(runVisibilitySchema.safeParse(val).success).toBe(true);
   });
 

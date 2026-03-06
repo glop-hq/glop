@@ -6,9 +6,9 @@ import type { HistoryResponse, Run } from "@glop/shared";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { ColumnHeader, type SortDir } from "./column-header";
 import { RelativeTime } from "./relative-time";
-import { Button } from "@/components/ui/button";
+import { VisibilityBadge } from "./visibility-badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Clock, FolderGit2, GitBranch, GitCommitHorizontal, GitPullRequest, X } from "lucide-react";
+import { Clock, FolderGit2, GitBranch, GitCommitHorizontal, GitPullRequest, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatDuration(startedAt: string, completedAt: string | null): string {
@@ -38,7 +38,7 @@ const statusDotClass: Record<string, string> = {
   failed: "bg-red-500",
 };
 
-type SortField = "developer" | "repo" | "title" | "duration" | "completed";
+type SortField = "developer" | "repo" | "title" | "duration" | "visibility" | "completed";
 
 interface SortState {
   field: SortField | null;
@@ -48,10 +48,17 @@ interface SortState {
 interface FilterState {
   developer: Set<string>;
   repo: Set<string>;
+  visibility: Set<string>;
 }
 
 function getDeveloperName(run: Run): string {
   return run.git_user_name || run.developer_id.slice(0, 8);
+}
+
+function getVisibilityLabel(run: Run): string {
+  if (run.visibility === "workspace") return "Team";
+  if (run.shared_link_state === "active") return "Link";
+  return "Private";
 }
 
 function getDurationMs(run: Run): number {
@@ -59,28 +66,23 @@ function getDurationMs(run: Run): number {
   return new Date(run.completed_at).getTime() - new Date(run.started_at).getTime();
 }
 
-interface HistoryTableProps {
-  scope: "mine" | "team";
-}
-
-export function HistoryTable({ scope }: HistoryTableProps) {
+export function HistoryTable() {
   const [data, setData] = useState<HistoryResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [sort, setSort] = useState<SortState>({ field: "completed", dir: "desc" });
   const [filters, setFilters] = useState<FilterState>({
     developer: new Set(),
     repo: new Set(),
+    visibility: new Set(),
   });
   const router = useRouter();
   const { currentWorkspace } = useWorkspaces();
 
-  const fetchData = useCallback(async (showRefresh = false) => {
+  const fetchData = useCallback(async () => {
     if (!currentWorkspace) return;
-    if (showRefresh) setRefreshing(true);
-    else setLoading(true);
+    setLoading(true);
     try {
-      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}&workspace_id=${currentWorkspace.id}`);
+      const res = await fetch(`/api/v1/history?limit=50&workspace_id=${currentWorkspace.id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -88,9 +90,8 @@ export function HistoryTable({ scope }: HistoryTableProps) {
       console.error("Failed to fetch history:", err);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [scope, currentWorkspace]);
+  }, [currentWorkspace]);
 
   useEffect(() => {
     fetchData();
@@ -111,10 +112,11 @@ export function HistoryTable({ scope }: HistoryTableProps) {
   );
 
   const filterOptions = useMemo(() => {
-    if (!data) return { developers: [], repos: [] };
+    if (!data) return { developers: [], repos: [], visibilities: [] };
     const developers = [...new Set(data.runs.map(getDeveloperName))].sort();
     const repos = [...new Set(data.runs.map((r) => r.repo_key))].sort();
-    return { developers, repos };
+    const visibilities = [...new Set(data.runs.map(getVisibilityLabel))].sort();
+    return { developers, repos, visibilities };
   }, [data]);
 
   const filteredRuns = useMemo(() => {
@@ -126,6 +128,9 @@ export function HistoryTable({ scope }: HistoryTableProps) {
     }
     if (filters.repo.size > 0) {
       runs = runs.filter((r) => filters.repo.has(r.repo_key));
+    }
+    if (filters.visibility.size > 0) {
+      runs = runs.filter((r) => filters.visibility.has(getVisibilityLabel(r)));
     }
 
     if (sort.field && sort.dir) {
@@ -140,6 +145,8 @@ export function HistoryTable({ scope }: HistoryTableProps) {
             return dir * (a.title || "").localeCompare(b.title || "");
           case "duration":
             return dir * (getDurationMs(a) - getDurationMs(b));
+          case "visibility":
+            return dir * getVisibilityLabel(a).localeCompare(getVisibilityLabel(b));
           case "completed":
             return (
               dir *
@@ -159,9 +166,10 @@ export function HistoryTable({ scope }: HistoryTableProps) {
   const activeChips: { label: string; field: keyof FilterState; value: string }[] = [];
   for (const value of filters.developer) activeChips.push({ label: value, field: "developer", value });
   for (const value of filters.repo) activeChips.push({ label: value, field: "repo", value });
+  for (const value of filters.visibility) activeChips.push({ label: value, field: "visibility", value });
 
   const clearAllFilters = useCallback(() => {
-    setFilters({ developer: new Set(), repo: new Set() });
+    setFilters({ developer: new Set(), repo: new Set(), visibility: new Set() });
   }, []);
 
   const removeChip = useCallback(
@@ -187,25 +195,13 @@ export function HistoryTable({ scope }: HistoryTableProps) {
 
   return (
     <>
-      {/* Toolbar — rendered outside the card by the parent */}
-      <div className="flex items-center justify-between mb-4">
+      {/* Toolbar */}
+      <div className="mb-4">
         <p className="text-sm text-muted-foreground">
           {filteredRuns.length}
           {filteredRuns.length !== (data?.runs.length ?? 0) && ` of ${data?.runs.length}`}
-          {" "}{scope === "mine" ? "private" : "shared"} runs
+          {" "}runs
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => fetchData(true)}
-          disabled={refreshing}
-          className="cursor-pointer"
-        >
-          <RefreshCw
-            className={cn("h-3.5 w-3.5 mr-1", refreshing && "animate-spin")}
-          />
-          Refresh
-        </Button>
       </div>
 
       <div className="rounded-lg border bg-card">
@@ -235,22 +231,19 @@ export function HistoryTable({ scope }: HistoryTableProps) {
         {!data || data.runs.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-16 text-muted-foreground">
             <Clock className="h-8 w-8 mb-3 opacity-40" />
-            <p className="text-sm">
-              {scope === "mine"
-                ? "No private runs yet"
-                : "No runs shared with the workspace yet"}
-            </p>
+            <p className="text-sm">No completed runs yet</p>
           </div>
         ) : (
         <div className="overflow-x-auto">
           <table className="w-full table-fixed">
             <colgroup>
               <col className="w-8" />
-              <col style={{ width: "28%" }} />
-              <col style={{ width: "20%" }} />
-              <col style={{ width: "24%" }} />
-              <col style={{ width: "10%" }} />
+              <col style={{ width: "26%" }} />
               <col style={{ width: "18%" }} />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "8%" }} />
+              <col style={{ width: "10%" }} />
+              <col style={{ width: "16%" }} />
             </colgroup>
             <thead>
               <tr className="border-b bg-muted/30">
@@ -280,6 +273,14 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                   label="Duration"
                   sortDir={sort.field === "duration" ? sort.dir : null}
                   onSort={handleSort("duration")}
+                />
+                <ColumnHeader
+                  label="Visibility"
+                  sortDir={sort.field === "visibility" ? sort.dir : null}
+                  onSort={handleSort("visibility")}
+                  filterValues={filterOptions.visibilities}
+                  selectedFilters={filters.visibility}
+                  onFilterChange={setFilterField("visibility")}
                 />
                 <ColumnHeader
                   label="Completed"
@@ -393,6 +394,15 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                     {formatDuration(run.started_at, run.completed_at)}
                   </td>
 
+                  {/* Visibility */}
+                  <td className="px-4 py-3">
+                    <VisibilityBadge
+                      visibility={run.visibility}
+                      sharedLinkActive={run.shared_link_state === "active"}
+                      iconOnly
+                    />
+                  </td>
+
                   {/* Completed */}
                   <td className="px-4 py-3 text-sm text-muted-foreground">
                     {run.completed_at ? (
@@ -406,7 +416,7 @@ export function HistoryTable({ scope }: HistoryTableProps) {
               {filteredRuns.length === 0 && (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     className="px-4 py-8 text-center text-sm text-muted-foreground"
                   >
                     No runs match the current filters

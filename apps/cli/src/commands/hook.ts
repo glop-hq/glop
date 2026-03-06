@@ -43,8 +43,8 @@ export const hookCommand = new Command("__hook")
     payload.git_user_email = getGitUserEmail();
 
     // Extract conversation slug from transcript file (skip high-frequency PostToolUse)
-    const slugEvents = ["SessionStart", "UserPromptSubmit"];
-    if (slugEvents.includes(payload.hook_event_name as string) && typeof payload.transcript_path === "string") {
+    const skipSlugEvents = new Set(["PostToolUse"]);
+    if (!skipSlugEvents.has(payload.hook_event_name as string) && typeof payload.transcript_path === "string") {
       const slug = extractSlugFromTranscript(payload.transcript_path);
       if (slug) payload.slug = slug;
     }
