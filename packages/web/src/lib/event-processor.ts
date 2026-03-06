@@ -120,6 +120,12 @@ export async function processHook(
   let runId: string;
 
   if (needsNewRun && !classified.is_completion) {
+    // Don't create a new run on SessionStart without a slug — wait for the
+    // first event that carries a slug so we can properly match against
+    // existing runs (e.g., continuation after plan mode approval).
+    if (classified.content_type === "session_start" && !ctx.slug) {
+      return { run_id: "", event_id: "" };
+    }
     // Create new run
     runId = generateId();
     await db.insert(schema.runs).values({

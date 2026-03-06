@@ -13,7 +13,7 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2 } from "lucide-react";
+import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
@@ -109,6 +109,12 @@ export function RunDetailView({ runId }: { runId: string }) {
               <FileCode className="h-3.5 w-3.5 shrink-0" />
               {run.file_count} files
             </span>
+            {run.slug && (
+              <span className="flex items-center gap-1 font-mono min-w-0">
+                <Hash className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{run.slug}</span>
+              </span>
+            )}
           </div>
           {artifacts.length > 0 && (
             <div className="mt-2">
