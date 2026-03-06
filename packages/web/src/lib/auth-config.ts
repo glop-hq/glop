@@ -79,14 +79,84 @@ export const authConfig: NextAuthConfig = {
           .where(eq(schema.users.id, existing[0].id));
       }
 
+      // Resolve pending invitations for this email
+      const userEmail = user.email!;
+      const pendingInvitations = await db
+        .select()
+        .from(schema.workspace_invitations)
+        .where(
+          and(
+            eq(schema.workspace_invitations.email, userEmail),
+            eq(schema.workspace_invitations.status, "pending")
+          )
+        );
+
+      const now = new Date();
+      // Look up the user's ID (may have just been created above)
+      const resolvedUser = await db
+        .select({ id: schema.users.id })
+        .from(schema.users)
+        .where(eq(schema.users.email, userEmail))
+        .limit(1);
+
+      if (resolvedUser[0] && pendingInvitations.length > 0) {
+        const userId = resolvedUser[0].id;
+
+        for (const invitation of pendingInvitations) {
+          if (new Date(invitation.expires_at) < now) {
+            // Expired — mark as revoked
+            await db
+              .update(schema.workspace_invitations)
+              .set({ status: "revoked" })
+              .where(eq(schema.workspace_invitations.id, invitation.id));
+            continue;
+          }
+
+          // Check not already a member
+          const alreadyMember = await db
+            .select({ id: schema.workspace_members.id })
+            .from(schema.workspace_members)
+            .where(
+              and(
+                eq(schema.workspace_members.workspace_id, invitation.workspace_id),
+                eq(schema.workspace_members.user_id, userId)
+              )
+            )
+            .limit(1);
+
+          if (alreadyMember.length > 0) {
+            await db
+              .update(schema.workspace_invitations)
+              .set({ status: "accepted", accepted_at: now.toISOString() })
+              .where(eq(schema.workspace_invitations.id, invitation.id));
+            continue;
+          }
+
+          // Add to workspace
+          await db.insert(schema.workspace_members).values({
+            id: crypto.randomUUID(),
+            workspace_id: invitation.workspace_id,
+            user_id: userId,
+            role: invitation.role,
+            created_at: now.toISOString(),
+          });
+
+          await db
+            .update(schema.workspace_invitations)
+            .set({ status: "accepted", accepted_at: now.toISOString() })
+            .where(eq(schema.workspace_invitations.id, invitation.id));
+        }
+      }
+
       return true;
     },
 
     async jwt({ token, account }) {
+      const db = getDb();
+
       if (account) {
-        // On sign-in, look up our user and embed info in the JWT
-        const db = getDb();
-        const users = await db
+        // On sign-in, look up our user by provider and embed info in the JWT
+        const found = await db
           .select()
           .from(schema.users)
           .where(
@@ -100,35 +170,30 @@ export const authConfig: NextAuthConfig = {
           )
           .limit(1);
 
-        if (users[0]) {
-          token.user_id = users[0].id;
-          token.email = users[0].email;
-          token.name = users[0].name;
-          token.avatar_url = users[0].avatar_url;
-
-          // Fetch workspace memberships
-          const memberships = await db
-            .select({
-              workspace_id: schema.workspace_members.workspace_id,
-              role: schema.workspace_members.role,
-              workspace_name: schema.workspaces.name,
-              workspace_slug: schema.workspaces.slug,
-            })
-            .from(schema.workspace_members)
-            .innerJoin(
-              schema.workspaces,
-              eq(schema.workspace_members.workspace_id, schema.workspaces.id)
-            )
-            .where(eq(schema.workspace_members.user_id, users[0].id));
-
-          token.workspaces = memberships.map((m) => ({
-            id: m.workspace_id,
-            name: m.workspace_name,
-            slug: m.workspace_slug,
-            role: m.role,
-          }));
+        if (found[0]) {
+          token.user_id = found[0].id;
+          token.email = found[0].email;
+          token.name = found[0].name;
+          token.avatar_url = found[0].avatar_url;
         }
       }
+
+      // Always refresh workspace memberships from DB (IDs + roles only)
+      if (token.user_id) {
+        const memberships = await db
+          .select({
+            workspace_id: schema.workspace_members.workspace_id,
+            role: schema.workspace_members.role,
+          })
+          .from(schema.workspace_members)
+          .where(eq(schema.workspace_members.user_id, token.user_id as string));
+
+        token.workspaces = memberships.map((m) => ({
+          id: m.workspace_id,
+          role: m.role,
+        }));
+      }
+
       return token;
     },
 

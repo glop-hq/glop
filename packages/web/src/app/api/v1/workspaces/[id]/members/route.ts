@@ -3,7 +3,8 @@ import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { requireSession, AuthError } from "@/lib/session";
 import { requireWorkspaceMember, isWorkspaceAdmin, WorkspaceAuthError } from "@/lib/workspace-auth";
-import { memberInviteSchema } from "@glop/shared";
+import { memberInviteSchema, INVITATION_EXPIRY_DAYS } from "@glop/shared";
+import { sendInvitationEmail } from "@/lib/email";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,46 @@ export async function GET(
       },
     }));
 
-    return NextResponse.json({ members: result });
+    // Also fetch pending invitations
+    const invitations = await db
+      .select({
+        id: schema.workspace_invitations.id,
+        workspace_id: schema.workspace_invitations.workspace_id,
+        email: schema.workspace_invitations.email,
+        role: schema.workspace_invitations.role,
+        status: schema.workspace_invitations.status,
+        invited_by: schema.workspace_invitations.invited_by,
+        expires_at: schema.workspace_invitations.expires_at,
+        created_at: schema.workspace_invitations.created_at,
+        inviter_email: schema.users.email,
+        inviter_name: schema.users.name,
+      })
+      .from(schema.workspace_invitations)
+      .innerJoin(schema.users, eq(schema.workspace_invitations.invited_by, schema.users.id))
+      .where(
+        and(
+          eq(schema.workspace_invitations.workspace_id, workspaceId),
+          eq(schema.workspace_invitations.status, "pending")
+        )
+      );
+
+    const invitationResult = invitations.map((inv) => ({
+      id: inv.id,
+      workspace_id: inv.workspace_id,
+      email: inv.email,
+      role: inv.role,
+      status: inv.status,
+      invited_by: inv.invited_by,
+      expires_at: inv.expires_at,
+      created_at: inv.created_at,
+      inviter: {
+        id: inv.invited_by,
+        email: inv.inviter_email,
+        name: inv.inviter_name,
+      },
+    }));
+
+    return NextResponse.json({ members: result, invitations: invitationResult });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(
@@ -103,53 +143,126 @@ export async function POST(
       .where(eq(schema.users.email, email))
       .limit(1);
 
-    if (users.length === 0) {
-      return NextResponse.json(
-        { error: "User not found. They must sign up first.", code: "USER_NOT_FOUND" },
-        { status: 404 }
-      );
+    if (users.length > 0) {
+      // User exists — add directly as member
+      const targetUser = users[0];
+
+      const existing = await db
+        .select()
+        .from(schema.workspace_members)
+        .where(
+          and(
+            eq(schema.workspace_members.workspace_id, workspaceId),
+            eq(schema.workspace_members.user_id, targetUser.id)
+          )
+        )
+        .limit(1);
+
+      if (existing.length > 0) {
+        return NextResponse.json(
+          { error: "User is already a member", code: "ALREADY_MEMBER" },
+          { status: 409 }
+        );
+      }
+
+      const memberId = crypto.randomUUID();
+      await db.insert(schema.workspace_members).values({
+        id: memberId,
+        workspace_id: workspaceId,
+        user_id: targetUser.id,
+        role,
+        created_at: new Date().toISOString(),
+      });
+
+      return NextResponse.json({
+        id: memberId,
+        workspace_id: workspaceId,
+        user_id: targetUser.id,
+        role,
+        user: {
+          id: targetUser.id,
+          email: targetUser.email,
+          name: targetUser.name,
+          avatar_url: targetUser.avatar_url,
+        },
+      }, { status: 201 });
     }
 
-    const targetUser = users[0];
-
-    // Check if already a member
-    const existing = await db
+    // User not found — create pending email invitation
+    // Check for existing pending invitation
+    const existingInvitation = await db
       .select()
-      .from(schema.workspace_members)
+      .from(schema.workspace_invitations)
       .where(
         and(
-          eq(schema.workspace_members.workspace_id, workspaceId),
-          eq(schema.workspace_members.user_id, targetUser.id)
+          eq(schema.workspace_invitations.workspace_id, workspaceId),
+          eq(schema.workspace_invitations.email, email),
+          eq(schema.workspace_invitations.status, "pending")
         )
       )
       .limit(1);
 
-    if (existing.length > 0) {
+    if (existingInvitation.length > 0) {
       return NextResponse.json(
-        { error: "User is already a member", code: "ALREADY_MEMBER" },
+        { error: "An invitation is already pending for this email", code: "ALREADY_INVITED" },
         { status: 409 }
       );
     }
 
-    const memberId = crypto.randomUUID();
-    await db.insert(schema.workspace_members).values({
-      id: memberId,
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + INVITATION_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+    const invitationId = crypto.randomUUID();
+    await db.insert(schema.workspace_invitations).values({
+      id: invitationId,
       workspace_id: workspaceId,
-      user_id: targetUser.id,
+      email,
       role,
-      created_at: new Date().toISOString(),
+      status: "pending",
+      invited_by: session.user_id,
+      expires_at: expiresAt.toISOString(),
+      created_at: now.toISOString(),
+    });
+
+    // Fetch inviter info and workspace name for response + email
+    const inviter = await db
+      .select({ id: schema.users.id, email: schema.users.email, name: schema.users.name })
+      .from(schema.users)
+      .where(eq(schema.users.id, session.user_id))
+      .limit(1);
+
+    const workspace = await db
+      .select({ name: schema.workspaces.name })
+      .from(schema.workspaces)
+      .where(eq(schema.workspaces.id, workspaceId))
+      .limit(1);
+
+    // Send invitation email (fire-and-forget — don't block the response)
+    const inviterName = inviter[0]?.name || inviter[0]?.email || "Someone";
+    const workspaceName = workspace[0]?.name || "a workspace";
+    const signupUrl = `${request.nextUrl.origin}/login`;
+    sendInvitationEmail({
+      to: email,
+      inviterName,
+      workspaceName,
+      signupUrl,
     });
 
     return NextResponse.json({
-      id: memberId,
-      workspace_id: workspaceId,
-      user_id: targetUser.id,
-      role,
-      user: {
-        id: targetUser.id,
-        email: targetUser.email,
-        name: targetUser.name,
-        avatar_url: targetUser.avatar_url,
+      invitation: {
+        id: invitationId,
+        workspace_id: workspaceId,
+        email,
+        role,
+        status: "pending",
+        invited_by: session.user_id,
+        expires_at: expiresAt.toISOString(),
+        created_at: now.toISOString(),
+        inviter: inviter[0] ? {
+          id: inviter[0].id,
+          email: inviter[0].email,
+          name: inviter[0].name,
+        } : undefined,
       },
     }, { status: 201 });
   } catch (error) {

@@ -3,6 +3,7 @@ import {
   pgEnum,
   text,
   integer,
+  boolean,
   index,
   uuid,
   timestamp,
@@ -74,6 +75,12 @@ export const artifactTypeEnum = pgEnum("artifact_type", [
 ]);
 
 export const memberRoleEnum = pgEnum("member_role", ["admin", "member"]);
+
+export const invitationStatusEnum = pgEnum("invitation_status", [
+  "pending",
+  "accepted",
+  "revoked",
+]);
 
 export const runVisibilityEnum = pgEnum("run_visibility", [
   "private",
@@ -179,8 +186,6 @@ export const runs = pgTable(
       .notNull()
       .default([]),
     visibility: runVisibilityEnum("visibility").notNull().default("private"),
-    shared_link_id: text("shared_link_id"),
-    shared_link_token_hash: text("shared_link_token_hash"),
     shared_link_state: sharedLinkStateEnum("shared_link_state"),
     shared_link_expires_at: timestamp("shared_link_expires_at", {
       mode: "string",
@@ -230,7 +235,6 @@ export const runs = pgTable(
     index("runs_workspace_id_idx").on(table.workspace_id),
     index("runs_owner_user_id_idx").on(table.owner_user_id),
     index("runs_visibility_idx").on(table.visibility),
-    index("runs_shared_link_id_idx").on(table.shared_link_id),
   ]
 );
 
@@ -287,6 +291,63 @@ export const artifacts = pgTable(
     }).notNull(),
   },
   (table) => [index("artifacts_run_id_idx").on(table.run_id)]
+);
+
+export const workspace_invitations = pgTable(
+  "workspace_invitations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    email: text("email").notNull(),
+    role: memberRoleEnum("role").notNull().default("member"),
+    status: invitationStatusEnum("status").notNull().default("pending"),
+    invited_by: uuid("invited_by")
+      .notNull()
+      .references(() => users.id),
+    expires_at: timestamp("expires_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    accepted_at: timestamp("accepted_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("workspace_invitations_workspace_id_idx").on(table.workspace_id),
+    index("workspace_invitations_email_status_idx").on(
+      table.email,
+      table.status
+    ),
+  ]
+);
+
+export const workspace_invite_links = pgTable(
+  "workspace_invite_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" })
+      .unique(),
+    token: text("token").notNull().unique(),
+    role: memberRoleEnum("role").notNull().default("member"),
+    enabled: boolean("enabled").notNull().default(true),
+    created_by: uuid("created_by")
+      .notNull()
+      .references(() => users.id),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
 );
 
 export const api_keys = pgTable("api_keys", {

@@ -60,6 +60,11 @@ export function SharedRunView({ data }: { data: SharedRunDetailResponse }) {
                 {run.file_count} files
               </span>
             </div>
+            {artifacts.length > 0 && (
+              <div className="mt-2">
+                <ArtifactBadges artifacts={artifacts} />
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-3">
             <PhaseBadge phase={run.phase} />
@@ -75,18 +80,6 @@ export function SharedRunView({ data }: { data: SharedRunDetailResponse }) {
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground">{run.summary}</p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Artifacts */}
-        {artifacts.length > 0 && (
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">Artifacts</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ArtifactBadges artifacts={artifacts} />
             </CardContent>
           </Card>
         )}

@@ -3,11 +3,12 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { HistoryResponse, Run } from "@glop/shared";
+import { useWorkspaces } from "@/hooks/use-workspaces";
 import { ColumnHeader, type SortDir } from "./column-header";
 import { RelativeTime } from "./relative-time";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { RefreshCw, Clock, FolderGit2, GitBranch, X } from "lucide-react";
+import { RefreshCw, Clock, FolderGit2, GitBranch, GitCommitHorizontal, GitPullRequest, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 function formatDuration(startedAt: string, completedAt: string | null): string {
@@ -72,12 +73,14 @@ export function HistoryTable({ scope }: HistoryTableProps) {
     repo: new Set(),
   });
   const router = useRouter();
+  const { currentWorkspace } = useWorkspaces();
 
   const fetchData = useCallback(async (showRefresh = false) => {
+    if (!currentWorkspace) return;
     if (showRefresh) setRefreshing(true);
     else setLoading(true);
     try {
-      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}`);
+      const res = await fetch(`/api/v1/history?limit=50&scope=${scope}&workspace_id=${currentWorkspace.id}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -87,7 +90,7 @@ export function HistoryTable({ scope }: HistoryTableProps) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [scope]);
+  }, [scope, currentWorkspace]);
 
   useEffect(() => {
     fetchData();
@@ -243,15 +246,20 @@ export function HistoryTable({ scope }: HistoryTableProps) {
           <table className="w-full table-fixed">
             <colgroup>
               <col className="w-8" />
-              <col style={{ width: "22%" }} />
-              <col style={{ width: "25%" }} />
-              <col style={{ width: "25%" }} />
+              <col style={{ width: "28%" }} />
+              <col style={{ width: "20%" }} />
+              <col style={{ width: "24%" }} />
               <col style={{ width: "10%" }} />
               <col style={{ width: "18%" }} />
             </colgroup>
             <thead>
               <tr className="border-b bg-muted/30">
                 <th className="pl-4 pr-2" />
+                <ColumnHeader
+                  label="Task"
+                  sortDir={sort.field === "title" ? sort.dir : null}
+                  onSort={handleSort("title")}
+                />
                 <ColumnHeader
                   label="Developer"
                   sortDir={sort.field === "developer" ? sort.dir : null}
@@ -267,11 +275,6 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                   filterValues={filterOptions.repos}
                   selectedFilters={filters.repo}
                   onFilterChange={setFilterField("repo")}
-                />
-                <ColumnHeader
-                  label="Title"
-                  sortDir={sort.field === "title" ? sort.dir : null}
-                  onSort={handleSort("title")}
                 />
                 <ColumnHeader
                   label="Duration"
@@ -304,8 +307,65 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                     />
                   </td>
 
+                  {/* Task */}
+                  <td className="pl-2 pr-4 py-3 text-sm">
+                    <div className="truncate">{run.title || "-"}</div>
+                    {run.artifacts && run.artifacts.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {[...run.artifacts].sort((a, b) => (a.artifact_type === "pr" ? -1 : b.artifact_type === "pr" ? 1 : 0)).map((a) => {
+                          if (a.artifact_type === "commit") {
+                            const content = (
+                              <>
+                                <GitCommitHorizontal className="h-3 w-3" />
+                                {a.external_id?.slice(0, 7)}
+                              </>
+                            );
+                            return a.url ? (
+                              <a
+                                key={a.id}
+                                href={a.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                title={a.label || undefined}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {content}
+                              </a>
+                            ) : (
+                              <span
+                                key={a.id}
+                                className="inline-flex items-center gap-1 text-xs rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground"
+                                title={a.label || undefined}
+                              >
+                                {content}
+                              </span>
+                            );
+                          }
+                          if (a.artifact_type === "pr") {
+                            return (
+                              <a
+                                key={a.id}
+                                href={a.url || undefined}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-xs rounded-full bg-muted px-1.5 py-0.5 text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer"
+                                title={a.label || undefined}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <GitPullRequest className="h-3 w-3" />
+                                #{a.external_id}
+                              </a>
+                            );
+                          }
+                          return null;
+                        })}
+                      </div>
+                    )}
+                  </td>
+
                   {/* Developer */}
-                  <td className="pl-2 pr-4 py-3">
+                  <td className="px-4 py-3">
                     <div className="font-medium text-sm truncate">
                       {run.git_user_name || run.developer_id.slice(0, 8)}
                     </div>
@@ -326,11 +386,6 @@ export function HistoryTable({ scope }: HistoryTableProps) {
                       <GitBranch className="h-3 w-3 shrink-0" />
                       <span className="truncate">{run.branch_name}</span>
                     </div>
-                  </td>
-
-                  {/* Title */}
-                  <td className="px-4 py-3 text-sm truncate">
-                    {run.title || "-"}
                   </td>
 
                   {/* Duration */}

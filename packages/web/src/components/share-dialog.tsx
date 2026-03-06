@@ -3,33 +3,34 @@
 import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
-import { Share2, Users, Link2, Lock, Copy, Check, Loader2 } from "lucide-react";
-import type { Run, RunVisibility } from "@glop/shared";
+import { Share2, Users, Link2, Copy, Check, Loader2, XCircle } from "lucide-react";
+import type { Run, ShareRunResponse } from "@glop/shared";
 
 interface ShareDialogProps {
   run: Run;
-  onVisibilityChange?: (visibility: RunVisibility) => void;
+  sharedLinkActive: boolean;
+  onShareChange?: (resp: ShareRunResponse) => void;
 }
 
-export function ShareDialog({ run, onVisibilityChange }: ShareDialogProps) {
+type ShareAction = "share_workspace" | "unshare_workspace" | "create_link" | "revoke_link";
+
+export function ShareDialog({ run, sharedLinkActive, onShareChange }: ShareDialogProps) {
   const [open, setOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState<ShareAction | null>(null);
   const [sharedUrl, setSharedUrl] = useState<string | null>(null);
-  const [expiresAt, setExpiresAt] = useState<string | null>(run.shared_link_expires_at);
   const [copied, setCopied] = useState(false);
-  const [visibility, setVisibility] = useState<RunVisibility>(run.visibility);
   const [error, setError] = useState<string | null>(null);
 
-  const updateShare = useCallback(
-    async (newVisibility: RunVisibility, expiresInDays?: number) => {
-      setLoading(true);
+  const callShare = useCallback(
+    async (action: ShareAction, expiresInDays?: number) => {
+      setLoading(action);
       setError(null);
       try {
         const res = await fetch(`/api/v1/runs/${run.id}/share`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            visibility: newVisibility,
+            action,
             ...(expiresInDays ? { expires_in_days: expiresInDays } : {}),
           }),
         });
@@ -39,43 +40,18 @@ export function ShareDialog({ run, onVisibilityChange }: ShareDialogProps) {
           throw new Error(data.error || `HTTP ${res.status}`);
         }
 
-        const data = await res.json();
-        setVisibility(data.visibility);
+        const data: ShareRunResponse = await res.json();
         if (data.shared_link_url) setSharedUrl(data.shared_link_url);
-        if (data.expires_at) setExpiresAt(data.expires_at);
-        onVisibilityChange?.(data.visibility);
+        if (!data.shared_link_active) setSharedUrl(null);
+        onShareChange?.(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to update sharing");
       } finally {
-        setLoading(false);
+        setLoading(null);
       }
     },
-    [run.id, onVisibilityChange]
+    [run.id, onShareChange]
   );
-
-  const revokeShare = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`/api/v1/runs/${run.id}/share`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || `HTTP ${res.status}`);
-      }
-
-      setVisibility("private");
-      setSharedUrl(null);
-      setExpiresAt(null);
-      onVisibilityChange?.("private");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to revoke");
-    } finally {
-      setLoading(false);
-    }
-  }, [run.id, onVisibilityChange]);
 
   const copyUrl = useCallback(() => {
     if (sharedUrl) {
@@ -84,6 +60,8 @@ export function ShareDialog({ run, onVisibilityChange }: ShareDialogProps) {
       setTimeout(() => setCopied(false), 2000);
     }
   }, [sharedUrl]);
+
+  const isWorkspaceShared = run.visibility === "workspace";
 
   return (
     <Popover
@@ -102,134 +80,135 @@ export function ShareDialog({ run, onVisibilityChange }: ShareDialogProps) {
         </Button>
       }
     >
-      <div className="w-72 p-3 space-y-3">
+      <div className="w-72 p-3 space-y-4">
         <h3 className="text-sm font-semibold">Share this run</h3>
 
         {error && (
           <p className="text-xs text-destructive">{error}</p>
         )}
 
-        {visibility === "private" && (
-          <div className="space-y-2">
-            <p className="text-xs text-muted-foreground">
-              This run is only visible to you.
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full cursor-pointer justify-start"
-              disabled={loading}
-              onClick={() => updateShare("workspace")}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Users className="h-4 w-4 mr-2" />
-              )}
+        {/* Workspace sharing section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Users className="h-4 w-4" />
               Share with team
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full cursor-pointer justify-start"
-              disabled={loading}
-              onClick={() => updateShare("shared_link")}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-2" />
-              )}
+            </div>
+            {isWorkspaceShared ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 cursor-pointer text-xs text-muted-foreground"
+                disabled={loading !== null}
+                onClick={() => callShare("unshare_workspace")}
+              >
+                {loading === "unshare_workspace" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  "Remove"
+                )}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 cursor-pointer text-xs"
+                disabled={loading !== null}
+                onClick={() => callShare("share_workspace")}
+              >
+                {loading === "share_workspace" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  "Enable"
+                )}
+              </Button>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            {isWorkspaceShared
+              ? "Visible to all workspace members."
+              : "Only visible to you."}
+          </p>
+        </div>
+
+        <hr className="border-border" />
+
+        {/* Link sharing section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-sm font-medium">
+              <Link2 className="h-4 w-4" />
               Share via link
-            </Button>
-          </div>
-        )}
-
-        {visibility === "workspace" && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-blue-600">
-              <Users className="h-3.5 w-3.5" />
-              Shared with team
             </div>
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full cursor-pointer justify-start"
-              disabled={loading}
-              onClick={() => updateShare("shared_link")}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Link2 className="h-4 w-4 mr-2" />
-              )}
-              Create share link
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="w-full cursor-pointer justify-start text-muted-foreground"
-              disabled={loading}
-              onClick={() => updateShare("private")}
-            >
-              <Lock className="h-4 w-4 mr-2" />
-              Make private
-            </Button>
+            {sharedLinkActive ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 cursor-pointer text-xs text-destructive"
+                disabled={loading !== null}
+                onClick={() => callShare("revoke_link")}
+              >
+                {loading === "revoke_link" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <>
+                    <XCircle className="h-3 w-3 mr-1" />
+                    Revoke
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 px-2 cursor-pointer text-xs"
+                disabled={loading !== null}
+                onClick={() => callShare("create_link")}
+              >
+                {loading === "create_link" ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  "Create link"
+                )}
+              </Button>
+            )}
           </div>
-        )}
 
-        {visibility === "shared_link" && (
-          <div className="space-y-2">
-            <div className="flex items-center gap-2 text-xs text-green-600">
-              <Link2 className="h-3.5 w-3.5" />
-              Shared via link
+          {sharedLinkActive && sharedUrl && (
+            <div className="flex gap-1">
+              <input
+                type="text"
+                readOnly
+                value={sharedUrl}
+                className="flex-1 rounded-md border px-2 py-1 text-xs font-mono bg-muted truncate"
+              />
+              <Button
+                size="sm"
+                variant="outline"
+                className="cursor-pointer shrink-0"
+                onClick={copyUrl}
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 text-green-500" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5" />
+                )}
+              </Button>
             </div>
+          )}
 
-            {sharedUrl && (
-              <div className="flex gap-1">
-                <input
-                  type="text"
-                  readOnly
-                  value={sharedUrl}
-                  className="flex-1 rounded-md border px-2 py-1 text-xs font-mono bg-muted truncate"
-                />
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="cursor-pointer shrink-0"
-                  onClick={copyUrl}
-                >
-                  {copied ? (
-                    <Check className="h-3.5 w-3.5 text-green-500" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
-              </div>
-            )}
+          {sharedLinkActive && run.shared_link_expires_at && (
+            <p className="text-xs text-muted-foreground">
+              Expires {new Date(run.shared_link_expires_at).toLocaleDateString()}
+            </p>
+          )}
 
-            {expiresAt && (
-              <p className="text-xs text-muted-foreground">
-                Expires {new Date(expiresAt).toLocaleDateString()}
-              </p>
-            )}
-
-            <Button
-              size="sm"
-              variant="ghost"
-              className="w-full cursor-pointer justify-start text-destructive"
-              disabled={loading}
-              onClick={revokeShare}
-            >
-              {loading ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Lock className="h-4 w-4 mr-2" />
-              )}
-              Revoke link
-            </Button>
-          </div>
-        )}
+          {!sharedLinkActive && (
+            <p className="text-xs text-muted-foreground">
+              Anyone with the link can view this run.
+            </p>
+          )}
+        </div>
       </div>
     </Popover>
   );

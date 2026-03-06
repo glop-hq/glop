@@ -31,10 +31,17 @@ export async function GET(request: NextRequest) {
     const { offset, limit, scope } = parsed.data;
     const db = getDb();
 
-    const workspaceIds = session.workspaces.map((w) => w.id);
-    if (workspaceIds.length === 0) {
+    const allWorkspaceIds = session.workspaces.map((w) => w.id);
+    if (allWorkspaceIds.length === 0) {
       return NextResponse.json({ runs: [], total: 0, offset, limit });
     }
+
+    // Scope to a single workspace if requested, otherwise all
+    const requestedId = searchParams.get("workspace_id");
+    const workspaceIds =
+      requestedId && allWorkspaceIds.includes(requestedId)
+        ? [requestedId]
+        : allWorkspaceIds;
 
     const baseConditions = [
       inArray(schema.runs.status, ["completed", "failed"]),

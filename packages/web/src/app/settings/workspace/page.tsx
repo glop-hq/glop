@@ -1,23 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
+import { useWorkspaces } from "@/hooks/use-workspaces";
+import { useInviteLink } from "@/hooks/use-invite-link";
 import { NavHeader } from "@/components/nav-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2 } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
   const { data: session } = useSession();
+  const { currentWorkspace: workspaceDetail, refetch: refetchWorkspaces } = useWorkspaces();
 
-  // Get workspaces from the session token
-  const workspaces = (
+  // Get workspace auth info (id + role) from session
+  const sessionWorkspaces = (
     (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
   ) || [];
-  const workspace = workspaces[0];
+  const workspace = sessionWorkspaces.find((w) => w.id === workspaceDetail?.id) || sessionWorkspaces[0];
 
   if (!workspace) {
     return (
@@ -36,11 +39,111 @@ export default function WorkspaceSettingsPage() {
       <main className="mx-auto max-w-3xl p-6 space-y-6">
         <div>
           <h1 className="text-xl font-semibold">Workspace Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">{workspace.name}</p>
+          <p className="max-w-md truncate text-sm text-muted-foreground mt-1" title={workspaceDetail?.name}>{workspaceDetail?.name}</p>
         </div>
+        {workspace.role === "admin" && (
+          <GeneralSection
+            workspaceId={workspace.id}
+            workspaceName={workspaceDetail?.name || ""}
+            onSaved={refetchWorkspaces}
+          />
+        )}
         <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
+        {workspace.role === "admin" && (
+          <InviteLinkSection workspaceId={workspace.id} />
+        )}
       </main>
     </div>
+  );
+}
+
+function GeneralSection({
+  workspaceId,
+  workspaceName,
+  onSaved,
+}: {
+  workspaceId: string;
+  workspaceName: string;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState(workspaceName);
+  useEffect(() => { setName(workspaceName); }, [workspaceName]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const isDirty = name.trim() !== workspaceName;
+
+  const handleSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !isDirty) return;
+
+    setSaving(true);
+    setError(null);
+    setSaved(false);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+
+      onSaved();
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Settings className="h-4 w-4" />
+          General
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSave} className="flex items-end gap-2">
+          <div className="flex-1">
+            <label className="text-xs font-medium text-muted-foreground">
+              Workspace name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className="mt-1 w-full rounded-md border px-3 py-1.5 text-sm"
+              required
+              maxLength={100}
+            />
+          </div>
+          <Button
+            type="submit"
+            size="sm"
+            className="cursor-pointer"
+            disabled={saving || !isDirty || !name.trim()}
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : saved ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              "Save"
+            )}
+          </Button>
+        </form>
+        {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -53,12 +156,13 @@ function MembersSection({
   isAdmin: boolean;
   currentUserId?: string;
 }) {
-  const { members, loading, error, inviteMember, updateMemberRole, removeMember } =
+  const { members, invitations, loading, error, inviteMember, updateMemberRole, removeMember, cancelInvitation, resendInvitation } =
     useWorkspaceMembers(workspaceId);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"admin" | "member">("member");
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [inviteSuccess, setInviteSuccess] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
   const handleInvite = async (e: React.FormEvent) => {
@@ -67,8 +171,10 @@ function MembersSection({
 
     setInviting(true);
     setInviteError(null);
+    setInviteSuccess(null);
     try {
       await inviteMember(inviteEmail.trim(), inviteRole);
+      setInviteSuccess(`Invite sent to ${inviteEmail.trim()}`);
       setInviteEmail("");
       setInviteRole("member");
     } catch (err) {
@@ -96,6 +202,29 @@ function MembersSection({
       await removeMember(memberId);
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to remove member");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    setActionLoading(invitationId);
+    try {
+      await cancelInvitation(invitationId);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to cancel invitation");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    setActionLoading(`resend-${invitationId}`);
+    try {
+      await resendInvitation(invitationId);
+      setInviteSuccess("Invitation email resent");
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to resend invitation");
     } finally {
       setActionLoading(null);
     }
@@ -195,6 +324,68 @@ function MembersSection({
           ))}
         </div>
 
+        {/* Pending invitations */}
+        {invitations.length > 0 && (
+          <div className="border-t pt-4">
+            <p className="text-xs font-medium text-muted-foreground mb-2">Pending Invitations</p>
+            <div className="divide-y">
+              {invitations.map((invitation) => (
+                <div key={invitation.id} className="flex items-center justify-between py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                      {invitation.email.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">{invitation.email}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Invited by {invitation.inviter?.name || invitation.inviter?.email || "unknown"}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                      Pending
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize">{invitation.role}</span>
+                    {isAdmin && (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Resend email"
+                          className="cursor-pointer h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          disabled={actionLoading === `resend-${invitation.id}`}
+                          onClick={() => handleResendInvitation(invitation.id)}
+                        >
+                          {actionLoading === `resend-${invitation.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <Send className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          title="Cancel invitation"
+                          className="cursor-pointer h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          disabled={actionLoading === invitation.id}
+                          onClick={() => handleCancelInvitation(invitation.id)}
+                        >
+                          {actionLoading === invitation.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <X className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Invite form - admin only */}
         {isAdmin && (
           <form onSubmit={handleInvite} className="flex items-end gap-2 pt-2 border-t">
@@ -232,6 +423,146 @@ function MembersSection({
         {inviteError && (
           <p className="text-xs text-destructive">{inviteError}</p>
         )}
+        {inviteSuccess && (
+          <p className="text-xs text-green-600">{inviteSuccess}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function InviteLinkSection({ workspaceId }: { workspaceId: string }) {
+  const { inviteLink, loading, createLink, disableLink } = useInviteLink(workspaceId);
+  const [creating, setCreating] = useState(false);
+  const [disabling, setDisabling] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [linkRole, setLinkRole] = useState<"admin" | "member">("member");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleCreate = async () => {
+    setCreating(true);
+    setError(null);
+    try {
+      await createLink(linkRole);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create link");
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const handleDisable = async () => {
+    setDisabling(true);
+    setError(null);
+    try {
+      await disableLink();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disable link");
+    } finally {
+      setDisabling(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    if (!inviteLink?.url) return;
+    await navigator.clipboard.writeText(inviteLink.url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">Invite Link</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-10 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Link2 className="h-4 w-4" />
+          Invite Link
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {inviteLink ? (
+          <>
+            <div className="flex items-center gap-2">
+              <input
+                readOnly
+                value={inviteLink.url}
+                className="flex-1 rounded-md border bg-muted px-3 py-1.5 text-sm font-mono text-muted-foreground"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                className="cursor-pointer"
+                onClick={handleCopy}
+              >
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Anyone with this link can join as <span className="font-medium">{inviteLink.role}</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer text-xs"
+                  onClick={handleCreate}
+                  disabled={creating}
+                >
+                  {creating ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                  Regenerate
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="cursor-pointer text-xs text-destructive hover:text-destructive"
+                  onClick={handleDisable}
+                  disabled={disabling}
+                >
+                  {disabling ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+                  Disable
+                </Button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center gap-2">
+            <select
+              value={linkRole}
+              onChange={(e) => setLinkRole(e.target.value as "admin" | "member")}
+              className="cursor-pointer rounded-md border px-2 py-1.5 text-sm"
+            >
+              <option value="member">Member</option>
+              <option value="admin">Admin</option>
+            </select>
+            <Button
+              size="sm"
+              className="cursor-pointer"
+              onClick={handleCreate}
+              disabled={creating}
+            >
+              {creating ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : (
+                <Link2 className="h-4 w-4 mr-1" />
+              )}
+              Generate Invite Link
+            </Button>
+          </div>
+        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );

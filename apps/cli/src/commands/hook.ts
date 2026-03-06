@@ -6,8 +6,8 @@ import { getRepoKey, getBranch, getGitUserName, getGitUserEmail } from "../lib/g
 function extractSlugFromTranscript(transcriptPath: string): string | null {
   try {
     const fd = openSync(transcriptPath, "r");
-    const buf = Buffer.alloc(8192);
-    const bytesRead = readSync(fd, buf, 0, 8192, 0);
+    const buf = Buffer.alloc(65536);
+    const bytesRead = readSync(fd, buf, 0, 65536, 0);
     closeSync(fd);
     const head = buf.toString("utf-8", 0, bytesRead);
     const match = head.match(/"slug":"([^"]+)"/);
@@ -42,8 +42,9 @@ export const hookCommand = new Command("__hook")
     payload.git_user_name = getGitUserName();
     payload.git_user_email = getGitUserEmail();
 
-    // Extract conversation slug from transcript file
-    if (typeof payload.transcript_path === "string") {
+    // Extract conversation slug from transcript file (skip high-frequency PostToolUse)
+    const slugEvents = ["SessionStart", "UserPromptSubmit"];
+    if (slugEvents.includes(payload.hook_event_name as string) && typeof payload.transcript_path === "string") {
       const slug = extractSlugFromTranscript(payload.transcript_path);
       if (slug) payload.slug = slug;
     }

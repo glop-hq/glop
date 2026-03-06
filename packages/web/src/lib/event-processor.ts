@@ -1,4 +1,4 @@
-import { eq, and, inArray, desc } from "drizzle-orm";
+import { eq, and, desc } from "drizzle-orm";
 import { schema, type DbClient } from "./db";
 import {
   deriveRunPatch,
@@ -8,6 +8,7 @@ import {
   type ClassifiedActivity,
 } from "@glop/shared";
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
+import { extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -114,36 +115,17 @@ export async function processHook(
     }
   }
 
-  // Fall back to identity tuple lookup for open runs
-  if (!existingRun) {
-    const identityRuns = await db
-      .select()
-      .from(schema.runs)
-      .where(
-        and(
-          eq(schema.runs.developer_id, ctx.developer_id),
-          eq(schema.runs.machine_id, ctx.machine_id),
-          eq(schema.runs.repo_key, ctx.repo_key),
-          eq(schema.runs.branch_name, ctx.branch_name),
-          inArray(schema.runs.status, ["active", "stale", "blocked"])
-        )
-      )
-      .limit(1);
-    const candidate = identityRuns[0] || null;
-    // Only reuse if session IDs match (or if the incoming event has no session_id)
-    if (candidate && ctx.session_id && candidate.session_id && candidate.session_id !== ctx.session_id) {
-      // Different session — don't merge into this run
-      existingRun = null;
-    } else {
-      existingRun = candidate;
-    }
-  }
-
   const needsNewRun = shouldCreateNewRun(existingRun as Run | null, matchedBySessionId);
 
   let runId: string;
 
   if (needsNewRun && !classified.is_completion) {
+    // Don't create a new run on SessionStart without a slug — wait for the
+    // first event that carries a slug so we can properly match against
+    // existing runs (e.g., continuation after plan mode approval).
+    if (classified.content_type === "session_start" && !ctx.slug) {
+      return { run_id: "", event_id: "" };
+    }
     // Create new run
     runId = generateId();
     await db.insert(schema.runs).values({
@@ -233,6 +215,76 @@ export async function processHook(
       ...(rawPayload.slug ? { slug: rawPayload.slug } : {}),
     },
   });
+
+  // Extract commit/PR artifacts from PostToolUse Bash commands
+  if (
+    hookType === "PostToolUse" &&
+    rawPayload.tool_name === "Bash" &&
+    rawPayload.tool_response != null
+  ) {
+    const command =
+      typeof (rawPayload.tool_input as Record<string, unknown>)?.command === "string"
+        ? (rawPayload.tool_input as Record<string, unknown>).command as string
+        : "";
+    const resp = rawPayload.tool_response as string | Record<string, unknown>;
+    const output = typeof resp === "string" ? resp : typeof resp.stdout === "string" ? resp.stdout : "";
+
+    const commit = extractCommitArtifact(command, output, ctx.repo_key);
+    if (commit) {
+      const existing = await db
+        .select({ id: schema.artifacts.id })
+        .from(schema.artifacts)
+        .where(
+          and(
+            eq(schema.artifacts.run_id, runId),
+            eq(schema.artifacts.artifact_type, "commit"),
+            eq(schema.artifacts.external_id, commit.external_id)
+          )
+        )
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(schema.artifacts).values({
+          id: generateId(),
+          run_id: runId,
+          artifact_type: "commit",
+          url: commit.url,
+          label: commit.label,
+          external_id: commit.external_id,
+          state: null,
+          metadata: {},
+          created_at: now,
+        });
+      }
+    }
+
+    const pr = extractPrArtifact(command, output);
+    if (pr) {
+      const existing = await db
+        .select({ id: schema.artifacts.id })
+        .from(schema.artifacts)
+        .where(
+          and(
+            eq(schema.artifacts.run_id, runId),
+            eq(schema.artifacts.artifact_type, "pr"),
+            eq(schema.artifacts.external_id, pr.external_id)
+          )
+        )
+        .limit(1);
+      if (existing.length === 0) {
+        await db.insert(schema.artifacts).values({
+          id: generateId(),
+          run_id: runId,
+          artifact_type: "pr",
+          url: pr.url,
+          label: pr.label,
+          external_id: pr.external_id,
+          state: "open",
+          metadata: {},
+          created_at: now,
+        });
+      }
+    }
+  }
 
   return { run_id: runId, event_id: eventId };
 }

@@ -54,8 +54,6 @@ export interface Run {
   file_count: number;
   files_touched: string[];
   visibility: RunVisibility;
-  shared_link_id: string | null;
-  shared_link_token_hash: string | null;
   shared_link_state: SharedLinkState | null;
   shared_link_expires_at: string | null;
   share_created_at: string | null;

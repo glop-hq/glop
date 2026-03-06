@@ -27,7 +27,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const workspaceId = session.workspaces[0]?.id;
+    const requestedWorkspaceId = body.workspace_id as string | undefined;
+    const workspaceId =
+      (requestedWorkspaceId && session.workspaces.some((w: { id: string }) => w.id === requestedWorkspaceId)
+        ? requestedWorkspaceId
+        : null) || session.workspaces[0]?.id;
     if (!workspaceId) {
       return NextResponse.json(
         { error: "No workspace found", code: "NO_WORKSPACE" },

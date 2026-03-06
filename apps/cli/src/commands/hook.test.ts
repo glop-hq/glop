@@ -40,6 +40,17 @@ function withMockStdin(data: string, fn: () => Promise<void>) {
   });
 }
 
+function mockTranscriptRead(content: string) {
+  vi.mocked(openSync).mockReturnValue(42);
+  vi.mocked(readSync).mockImplementation((_fd, buf: Buffer) => {
+    const bytes = Buffer.from(content);
+    const toCopy = Math.min(bytes.length, buf.length);
+    bytes.copy(buf, 0, 0, toCopy);
+    return toCopy;
+  });
+  vi.mocked(closeSync).mockReturnValue(undefined);
+}
+
 describe("__hook command", () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
 
@@ -210,14 +221,7 @@ describe("__hook command", () => {
     });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
-    const content = '{"type":"init","slug":"woolly-scribbling-kay"}\n{"type":"message"}\n';
-    vi.mocked(openSync).mockReturnValue(42);
-    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
-      const bytes = Buffer.from(content);
-      bytes.copy(buf);
-      return bytes.length;
-    });
-    vi.mocked(closeSync).mockReturnValue(undefined);
+    mockTranscriptRead('{"type":"init","slug":"woolly-scribbling-kay"}\n{"type":"message"}\n');
 
     await withMockStdin(
       JSON.stringify({
@@ -242,7 +246,6 @@ describe("__hook command", () => {
     });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
-    // Real-world layout: slug appears on line 6 after snapshots and user messages
     const lines = [
       '{"type":"file-history-snapshot","messageId":"aaa"}',
       '{"type":"progress","sessionId":"ses-1"}',
@@ -253,14 +256,7 @@ describe("__hook command", () => {
       '{"type":"user","sessionId":"ses-1","slug":"late-arriving-slug"}',
       '{"type":"assistant","sessionId":"ses-1","slug":"late-arriving-slug"}',
     ];
-    const content = lines.join("\n") + "\n";
-    vi.mocked(openSync).mockReturnValue(42);
-    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
-      const bytes = Buffer.from(content);
-      bytes.copy(buf);
-      return bytes.length;
-    });
-    vi.mocked(closeSync).mockReturnValue(undefined);
+    mockTranscriptRead(lines.join("\n") + "\n");
 
     await withMockStdin(
       JSON.stringify({
@@ -310,14 +306,7 @@ describe("__hook command", () => {
     });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
-    const content = '{"type":"init"}\n{"type":"message"}\n';
-    vi.mocked(openSync).mockReturnValue(42);
-    vi.mocked(readSync).mockImplementation((fd, buf: Buffer) => {
-      const bytes = Buffer.from(content);
-      bytes.copy(buf);
-      return bytes.length;
-    });
-    vi.mocked(closeSync).mockReturnValue(undefined);
+    mockTranscriptRead('{"type":"init"}\n{"type":"message"}\n');
 
     await withMockStdin(
       JSON.stringify({

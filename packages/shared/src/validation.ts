@@ -101,8 +101,6 @@ export const historyQuerySchema = z.object({
 
 export const runVisibilitySchema = z.enum(["private", "workspace", "shared_link"]);
 
-export const sharedLinkStateSchema = z.enum(["active", "revoked"]);
-
 export const memberRoleSchema = z.enum(["admin", "member"]);
 
 export const workspaceCreateSchema = z.object({
@@ -114,6 +112,10 @@ export const workspaceCreateSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric with hyphens"),
 });
 
+export const workspaceCreateRequestSchema = z.object({
+  name: z.string().min(1).max(100),
+});
+
 export const workspaceUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
 });
@@ -123,7 +125,23 @@ export const memberInviteSchema = z.object({
   role: memberRoleSchema.default("member"),
 });
 
+export const shareActionSchema = z.enum([
+  "share_workspace",
+  "unshare_workspace",
+  "create_link",
+  "revoke_link",
+]);
+
 export const shareRunSchema = z.object({
-  visibility: runVisibilitySchema,
+  action: shareActionSchema,
   expires_in_days: z.number().int().min(1).max(365).optional(),
+});
+
+export const inviteLinkCreateSchema = z.object({
+  role: memberRoleSchema.default("member"),
+});
+
+export const inviteLinkUpdateSchema = z.object({
+  enabled: z.boolean().optional(),
+  role: memberRoleSchema.optional(),
 });

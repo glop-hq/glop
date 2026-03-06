@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { MemberResponse } from "@glop/shared";
+import type { MemberResponse, InvitationResponse } from "@glop/shared";
 
 export function useWorkspaceMembers(workspaceId: string) {
   const [members, setMembers] = useState<MemberResponse[]>([]);
+  const [invitations, setInvitations] = useState<InvitationResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -14,6 +15,7 @@ export function useWorkspaceMembers(workspaceId: string) {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setMembers(json.members);
+      setInvitations(json.invitations || []);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch members");
@@ -74,13 +76,42 @@ export function useWorkspaceMembers(workspaceId: string) {
     await fetchMembers();
   };
 
+  const cancelInvitation = async (invitationId: string) => {
+    const res = await fetch(
+      `/api/v1/workspaces/${workspaceId}/invitations/${invitationId}`,
+      { method: "DELETE" }
+    );
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+
+    await fetchMembers();
+  };
+
+  const resendInvitation = async (invitationId: string) => {
+    const res = await fetch(
+      `/api/v1/workspaces/${workspaceId}/invitations/${invitationId}`,
+      { method: "POST" }
+    );
+
+    if (!res.ok) {
+      const data = await res.json();
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+  };
+
   return {
     members,
+    invitations,
     loading,
     error,
     inviteMember,
     updateMemberRole,
     removeMember,
+    cancelInvitation,
+    resendInvitation,
     refetch: fetchMembers,
   };
 }

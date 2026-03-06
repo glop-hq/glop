@@ -93,18 +93,15 @@ export interface AuthMeResponse {
 }
 
 export interface ShareRunRequest {
-  visibility: "private" | "workspace" | "shared_link";
+  action: "share_workspace" | "unshare_workspace" | "create_link" | "revoke_link";
   expires_in_days?: number;
 }
 
 export interface ShareRunResponse {
-  visibility: "private" | "workspace" | "shared_link";
+  visibility: "private" | "workspace";
+  shared_link_active: boolean;
   shared_link_url?: string;
-  expires_at?: string;
-}
-
-export interface RevokeShareResponse {
-  visibility: "private";
+  shared_link_expires_at?: string;
 }
 
 export interface SharedRunDetailResponse {
@@ -112,4 +109,36 @@ export interface SharedRunDetailResponse {
   events: Event[];
   artifacts: ArtifactInfo[];
   shared: true;
+}
+
+export interface InvitationResponse {
+  id: string;
+  workspace_id: string;
+  email: string;
+  role: "admin" | "member";
+  status: "pending" | "accepted" | "revoked";
+  invited_by: string;
+  expires_at: string;
+  created_at: string;
+  inviter?: {
+    id: string;
+    email: string;
+    name: string | null;
+  };
+}
+
+export interface InviteLinkResponse {
+  id: string;
+  workspace_id: string;
+  token: string;
+  url: string;
+  role: "admin" | "member";
+  enabled: boolean;
+  created_at: string;
+}
+
+export interface JoinWorkspaceResponse {
+  workspace_id: string;
+  workspace_name: string;
+  role: "admin" | "member";
 }

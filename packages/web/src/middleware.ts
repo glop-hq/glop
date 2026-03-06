@@ -6,6 +6,7 @@ const publicPaths = [
   "/api/v1/ingest",
   "/api/v1/health",
   "/api/v1/shared",
+  "/api/v1/join",
   "/api/auth",
   "/shared",
 ];

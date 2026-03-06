@@ -13,9 +13,9 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, Hash, FolderGit2, Link2 } from "lucide-react";
+import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RunVisibility, Run, RunStatus } from "@glop/shared";
+import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
 
 const statusDotClass: Record<RunStatus, string> = {
@@ -37,7 +37,8 @@ export function RunDetailView({ runId }: { runId: string }) {
   const { data, error, loading } = useRunDetail(runId);
   const { data: session } = useSession();
   const router = useRouter();
-  const [visibility, setVisibility] = useState<RunVisibility | null>(null);
+  const [visibility, setVisibility] = useState<"private" | "workspace" | null>(null);
+  const [sharedLinkActive, setSharedLinkActive] = useState<boolean | null>(null);
 
   if (loading) {
     return (
@@ -58,7 +59,14 @@ export function RunDetailView({ runId }: { runId: string }) {
   }
 
   const { run, events, artifacts } = data;
-  const currentVisibility = visibility ?? run.visibility;
+  const currentVisibility = visibility ?? (run.visibility === "workspace" ? "workspace" : "private");
+  const currentLinkActive = sharedLinkActive ?? (run.shared_link_state === "active");
+
+  const handleShareChange = (resp: ShareRunResponse) => {
+    setVisibility(resp.visibility);
+    setSharedLinkActive(resp.shared_link_active);
+  };
+
   const workspaces = (
     (session as unknown as Record<string, unknown>)?.workspaces as SessionWorkspace[]
   ) || [];
@@ -80,50 +88,50 @@ export function RunDetailView({ runId }: { runId: string }) {
             />
             {run.title || `Run ${run.id.slice(0, 8)}`}
           </h1>
-          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Monitor className="h-3.5 w-3.5" />
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1 shrink-0">
+              <Monitor className="h-3.5 w-3.5 shrink-0" />
               {run.git_user_name || run.developer_id.slice(0, 8)}
             </span>
-            <span className="flex items-center gap-1">
-              <Clock className="h-3.5 w-3.5" />
+            <span className="flex items-center gap-1 shrink-0">
+              <Clock className="h-3.5 w-3.5 shrink-0" />
               <RelativeTime date={run.started_at} />
             </span>
-            <span className="flex items-center gap-1 font-mono">
-              <FolderGit2 className="h-3.5 w-3.5" />
-              {run.repo_key}
+            <span className="flex items-center gap-1 font-mono min-w-0">
+              <FolderGit2 className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{run.repo_key}</span>
             </span>
-            <span className="flex items-center gap-1 font-mono">
-              <GitBranch className="h-3.5 w-3.5" />
-              {run.branch_name}
+            <span className="flex items-center gap-1 font-mono min-w-0">
+              <GitBranch className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{run.branch_name}</span>
             </span>
-            <span className="flex items-center gap-1">
-              <FileCode className="h-3.5 w-3.5" />
+            <span className="flex items-center gap-1 shrink-0">
+              <FileCode className="h-3.5 w-3.5 shrink-0" />
               {run.file_count} files
             </span>
-            {run.session_id && (
-              <span className="flex items-center gap-1 font-mono" title={run.session_id}>
-                <Hash className="h-3.5 w-3.5" />
-                {run.session_id.slice(0, 8)}
-              </span>
-            )}
             {run.slug && (
-              <span className="flex items-center gap-1 font-mono" title={run.slug}>
-                <Link2 className="h-3.5 w-3.5" />
-                {run.slug}
+              <span className="flex items-center gap-1 font-mono min-w-0">
+                <Hash className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{run.slug}</span>
               </span>
             )}
           </div>
+          {artifacts.length > 0 && (
+            <div className="mt-2">
+              <ArtifactBadges artifacts={artifacts} />
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-3">
           {run.status !== "completed" && run.status !== "failed" && (
             <PhaseBadge phase={run.phase} />
           )}
-          <VisibilityBadge visibility={currentVisibility} />
+          <VisibilityBadge visibility={currentVisibility} sharedLinkActive={currentLinkActive} />
           {showShare && (
             <ShareDialog
               run={{ ...run, visibility: currentVisibility }}
-              onVisibilityChange={setVisibility}
+              sharedLinkActive={currentLinkActive}
+              onShareChange={handleShareChange}
             />
           )}
         </div>
@@ -137,18 +145,6 @@ export function RunDetailView({ runId }: { runId: string }) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">{run.summary}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Artifacts */}
-      {artifacts.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Artifacts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ArtifactBadges artifacts={artifacts} />
           </CardContent>
         </Card>
       )}

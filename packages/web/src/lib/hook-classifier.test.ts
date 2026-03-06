@@ -226,12 +226,12 @@ describe("classifyHookPayload", () => {
       expect(result.files_touched).toEqual(["/src/index.ts"]);
     });
 
-    it("extracts path from tool_input", () => {
+    it("does not track files for read tools", () => {
       const result = classifyHookPayload("PostToolUse", {
         tool_name: "Read",
         tool_input: { path: "/src/config.ts" },
       });
-      expect(result.files_touched).toContain("/src/config.ts");
+      expect(result.files_touched).toEqual([]);
     });
   });
 });
