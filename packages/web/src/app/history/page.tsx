@@ -8,9 +8,6 @@ export default function HistoryPage() {
       <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
         <div className="mb-4">
           <h1 className="text-lg font-semibold">History</h1>
-          <p className="text-sm text-muted-foreground">
-            Completed and failed development sessions
-          </p>
         </div>
         <HistoryTable />
       </main>
