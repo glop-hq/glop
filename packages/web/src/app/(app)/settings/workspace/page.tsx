@@ -5,7 +5,6 @@ import { useSession } from "next-auth/react";
 import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useInviteLink } from "@/hooks/use-invite-link";
-import { NavHeader } from "@/components/nav-header";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,36 +23,30 @@ export default function WorkspaceSettingsPage() {
 
   if (!workspace) {
     return (
-      <div className="min-h-screen bg-background">
-        <NavHeader />
-        <main className="mx-auto max-w-3xl p-6">
-          <p className="text-muted-foreground">No workspace found.</p>
-        </main>
-      </div>
+      <main className="mx-auto max-w-3xl p-6">
+        <p className="text-muted-foreground">No workspace found.</p>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <NavHeader />
-      <main className="mx-auto max-w-3xl p-6 space-y-6">
-        <div>
-          <h1 className="text-xl font-semibold">Workspace Settings</h1>
-          <p className="max-w-md truncate text-sm text-muted-foreground mt-1" title={workspaceDetail?.name}>{workspaceDetail?.name}</p>
-        </div>
-        {workspace.role === "admin" && (
-          <GeneralSection
-            workspaceId={workspace.id}
-            workspaceName={workspaceDetail?.name || ""}
-            onSaved={refetchWorkspaces}
-          />
-        )}
-        <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
-        {workspace.role === "admin" && (
-          <InviteLinkSection workspaceId={workspace.id} />
-        )}
-      </main>
-    </div>
+    <main className="mx-auto max-w-3xl p-6 space-y-6">
+      <div>
+        <h1 className="text-xl font-semibold">Workspace Settings</h1>
+        <p className="max-w-md truncate text-sm text-muted-foreground mt-1" title={workspaceDetail?.name}>{workspaceDetail?.name}</p>
+      </div>
+      {workspace.role === "admin" && (
+        <GeneralSection
+          workspaceId={workspace.id}
+          workspaceName={workspaceDetail?.name || ""}
+          onSaved={refetchWorkspaces}
+        />
+      )}
+      <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
+      {workspace.role === "admin" && (
+        <InviteLinkSection workspaceId={workspace.id} />
+      )}
+    </main>
   );
 }
 

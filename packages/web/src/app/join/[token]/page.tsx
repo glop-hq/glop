@@ -62,7 +62,7 @@ export default function JoinWorkspacePage() {
       await updateSession();
 
       // Redirect to live page
-      router.push("/");
+      router.push("/live");
     } catch {
       setError("Failed to join workspace");
     } finally {
@@ -87,7 +87,7 @@ export default function JoinWorkspacePage() {
             <Button
               variant="outline"
               className="cursor-pointer mt-4"
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/live")}
             >
               Go to Dashboard
             </Button>
