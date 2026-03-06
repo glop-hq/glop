@@ -1,16 +1,19 @@
 {
   "name": "@glop/cli",
   "version": "0.1.0",
-  "private": true,
   "type": "module",
   "bin": {
     "glop": "./dist/index.js"
   },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsup",
     "dev": "tsx src/index.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "node -e \"if (!process.env.GLOP_DEFAULT_SERVER_URL) { console.error('Error: GLOP_DEFAULT_SERVER_URL must be set before publishing'); process.exit(1); }\" && tsup"
   },
   "dependencies": {
     "commander": "^13.0.0"
