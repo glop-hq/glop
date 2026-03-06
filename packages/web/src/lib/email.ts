@@ -1,6 +1,12 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let _resend: Resend | null = null;
+function getResend() {
+  if (!_resend) {
+    _resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return _resend;
+}
 
 const FROM_EMAIL = process.env.EMAIL_FROM || "Glop <noreply@glop.dev>";
 
@@ -16,7 +22,7 @@ export async function sendInvitationEmail({
   signupUrl: string;
 }) {
   try {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: FROM_EMAIL,
       to,
       subject: `${inviterName} invited you to join ${workspaceName} on Glop`,
