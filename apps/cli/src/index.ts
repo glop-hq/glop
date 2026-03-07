@@ -7,11 +7,12 @@ import { doctorCommand } from "./commands/doctor.js";
 import { hookCommand } from "./commands/hook.js";
 import { initCommand } from "./commands/init.js";
 import { statusCommand } from "./commands/status.js";
+import pkg from "../package.json";
 
 const program = new Command()
   .name("glop")
   .description("Passive control plane for local Claude-driven development")
-  .version("0.1.0");
+  .version(pkg.version);
 
 program.addCommand(authCommand);
 program.addCommand(deactivateCommand);
