@@ -120,12 +120,6 @@ export async function processHook(
   let runId: string;
 
   if (needsNewRun && !classified.is_completion) {
-    // Don't create a new run on SessionStart without a slug — wait for the
-    // first event that carries a slug so we can properly match against
-    // existing runs (e.g., continuation after plan mode approval).
-    if (classified.content_type === "session_start" && !ctx.slug) {
-      return { run_id: "", event_id: "" };
-    }
     // Create new run
     runId = generateId();
     await db.insert(schema.runs).values({
@@ -155,6 +149,27 @@ export async function processHook(
       created_at: now,
       updated_at: now,
     });
+
+    // If the new run has a slug, check for a parent run with the same slug
+    if (ctx.slug) {
+      const parentRuns = await db
+        .select({ id: schema.runs.id })
+        .from(schema.runs)
+        .where(
+          and(
+            eq(schema.runs.slug, ctx.slug),
+            eq(schema.runs.developer_id, ctx.developer_id)
+          )
+        )
+        .orderBy(desc(schema.runs.created_at))
+        .limit(1);
+      if (parentRuns[0] && parentRuns[0].id !== runId) {
+        await db
+          .update(schema.runs)
+          .set({ parent_run_id: parentRuns[0].id })
+          .where(eq(schema.runs.id, runId));
+      }
+    }
   } else if (existingRun) {
     runId = existingRun.id;
     // Map to a run-level event type for deriving the patch
@@ -174,6 +189,22 @@ export async function processHook(
     // Store slug on the run if it doesn't have one yet
     if (ctx.slug && !existingRun.slug) {
       updateData.slug = ctx.slug;
+
+      // Link to parent: find the most recent OTHER run with the same slug
+      const parentRuns = await db
+        .select({ id: schema.runs.id })
+        .from(schema.runs)
+        .where(
+          and(
+            eq(schema.runs.slug, ctx.slug),
+            eq(schema.runs.developer_id, ctx.developer_id)
+          )
+        )
+        .orderBy(desc(schema.runs.created_at))
+        .limit(1);
+      if (parentRuns[0] && parentRuns[0].id !== existingRun.id) {
+        updateData.parent_run_id = parentRuns[0].id;
+      }
     }
 
     if (Object.keys(updateData).length > 0) {

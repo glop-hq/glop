@@ -8,6 +8,13 @@
       "when": 1772827671031,
       "tag": "0000_large_earthquake",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1772910915250,
+      "tag": "0001_easy_joshua_kane",
+      "breakpoints": true
     }
   ]
 }

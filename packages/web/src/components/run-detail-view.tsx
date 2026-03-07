@@ -13,7 +13,8 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, ArrowRight, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
@@ -136,6 +137,31 @@ export function RunDetailView({ runId }: { runId: string }) {
           )}
         </div>
       </div>
+
+      {/* Continuation links */}
+      {(data.parent_run || data.child_runs) && (
+        <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
+          {data.parent_run && (
+            <Link
+              href={`/runs/${data.parent_run.id}`}
+              className="flex items-center gap-1 hover:text-foreground cursor-pointer"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              Continued from {data.parent_run.id.slice(0, 8)}
+            </Link>
+          )}
+          {data.child_runs?.map((child) => (
+            <Link
+              key={child.id}
+              href={`/runs/${child.id}`}
+              className="flex items-center gap-1 hover:text-foreground cursor-pointer"
+            >
+              Continued in {child.id.slice(0, 8)}
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          ))}
+        </div>
+      )}
 
       {/* Summary */}
       {run.summary && (

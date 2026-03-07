@@ -206,6 +206,7 @@ export const runs = pgTable(
       mode: "string",
       withTimezone: true,
     }).notNull(),
+    parent_run_id: uuid("parent_run_id"),
     completed_at: timestamp("completed_at", {
       mode: "string",
       withTimezone: true,
@@ -234,6 +235,7 @@ export const runs = pgTable(
     index("runs_workspace_id_idx").on(table.workspace_id),
     index("runs_owner_user_id_idx").on(table.owner_user_id),
     index("runs_visibility_idx").on(table.visibility),
+    index("runs_parent_run_id_idx").on(table.parent_run_id),
   ]
 );
 

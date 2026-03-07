@@ -56,6 +56,7 @@ export interface Run {
   visibility: RunVisibility;
   shared_link_state: SharedLinkState | null;
   shared_link_expires_at: string | null;
+  parent_run_id: string | null;
   share_created_at: string | null;
   started_at: string;
   last_heartbeat_at: string;

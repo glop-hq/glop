@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { eq, asc } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
-import { redactEventPayload, type Run, type Event, type ArtifactInfo } from "@glop/shared";
+import { redactEventPayload, type Run, type Event, type ArtifactInfo, type RunLink } from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -67,11 +67,40 @@ export async function GET(
       payload: redactEventPayload(event.payload),
     }));
 
+    // Fetch parent run link
+    let parent_run: RunLink | undefined;
+    if (run.parent_run_id) {
+      const [p] = await db
+        .select({
+          id: schema.runs.id,
+          status: schema.runs.status,
+          started_at: schema.runs.started_at,
+        })
+        .from(schema.runs)
+        .where(eq(schema.runs.id, run.parent_run_id))
+        .limit(1);
+      if (p) parent_run = p as RunLink;
+    }
+
+    // Fetch child runs
+    const childRows = await db
+      .select({
+        id: schema.runs.id,
+        status: schema.runs.status,
+        started_at: schema.runs.started_at,
+      })
+      .from(schema.runs)
+      .where(eq(schema.runs.parent_run_id, runId))
+      .orderBy(asc(schema.runs.created_at));
+    const child_runs = childRows.length ? (childRows as RunLink[]) : undefined;
+
     return NextResponse.json({
       run,
       events: redactedEvents,
       artifacts: rawArtifacts as ArtifactInfo[],
       shared: true,
+      parent_run,
+      child_runs,
     });
   } catch (error) {
     console.error("Shared run error:", error);

@@ -1,4 +1,4 @@
-import type { Run } from "./runs";
+import type { Run, RunStatus } from "./runs";
 import type { Event } from "./events";
 
 export interface ArtifactInfo {
@@ -28,10 +28,18 @@ export interface LiveBoardResponse {
   updated_at: string;
 }
 
+export interface RunLink {
+  id: string;
+  status: RunStatus;
+  started_at: string;
+}
+
 export interface RunDetailResponse {
   run: Run;
   events: Event[];
   artifacts: ArtifactInfo[];
+  parent_run?: RunLink;
+  child_runs?: RunLink[];
 }
 
 export interface HistoryResponse {
@@ -109,6 +117,8 @@ export interface SharedRunDetailResponse {
   events: Event[];
   artifacts: ArtifactInfo[];
   shared: true;
+  parent_run?: RunLink;
+  child_runs?: RunLink[];
 }
 
 export interface InvitationResponse {
