@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "glop - Live Development Board",
-  description: "Passive control plane for local Claude-driven development",
+  title: "glop - How great teams ship with AI",
+  description:
+    "The AI coding platform for teams. Get your team productive with AI, share best practices, and ship faster together.",
 };
 
 export default function RootLayout({
