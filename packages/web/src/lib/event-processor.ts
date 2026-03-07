@@ -42,7 +42,7 @@ function hookToEventType(classified: ClassifiedHook, isNewRun: boolean): EventTy
     case "permission_request":
       return "run.permission_request";
     case "session_end":
-      return "run.heartbeat";
+      return "run.completed";
     case "session_start":
       return isNewRun ? "run.started" : "run.heartbeat";
     case "tool_use":
