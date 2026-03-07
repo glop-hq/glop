@@ -50,10 +50,10 @@ export function saveConfig(config: GlopConfig): void {
 
 declare const __DEFAULT_SERVER_URL__: string;
 
+export function getDefaultServerUrl(): string {
+  return process.env.GLOP_SERVER_URL || __DEFAULT_SERVER_URL__;
+}
+
 export function getServerUrl(): string {
-  return (
-    process.env.GLOP_SERVER_URL ||
-    loadConfig()?.server_url ||
-    __DEFAULT_SERVER_URL__
-  );
+  return loadConfig()?.server_url || getDefaultServerUrl();
 }

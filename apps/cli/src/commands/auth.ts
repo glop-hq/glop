@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { saveConfig, getMachineId, getServerUrl } from "../lib/config.js";
+import { saveConfig, getMachineId, getDefaultServerUrl } from "../lib/config.js";
 import http from "http";
 import { exec } from "child_process";
 
@@ -33,7 +33,7 @@ export const authCommand = new Command("auth")
   .description("Authenticate with a glop server")
   .option("-s, --server <url>", "Server URL")
   .action(async (opts) => {
-    const serverUrl = (opts.server || getServerUrl()).replace(/\/+$/, "");
+    const serverUrl = (opts.server || getDefaultServerUrl()).replace(/\/+$/, "");
 
     const port = await findOpenPort();
     const machineId = getMachineId();
