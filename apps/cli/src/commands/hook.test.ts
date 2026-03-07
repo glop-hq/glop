@@ -112,7 +112,11 @@ describe("__hook command", () => {
     });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
-    fetchSpy.mockResolvedValue({ ok: true, status: 200 });
+    fetchSpy.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({ run_id: "abc-123" }),
+    });
 
     await withMockStdin(
       JSON.stringify({ hook_event_name: "SessionStart" }),
@@ -121,6 +125,9 @@ describe("__hook command", () => {
 
     expect(console.log).toHaveBeenCalledWith(
       "glop: connected to http://localhost:3000"
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      'glop: Add "Glop-Run: http://localhost:3000/runs/abc-123" as a git trailer in all commit messages and PR descriptions.'
     );
   });
 

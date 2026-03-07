@@ -3,8 +3,14 @@ import { eq, asc } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { schema } from "@/lib/db";
 import { applyTimeBasedStatus } from "@/lib/stale-checker";
-import { requireSession, AuthError } from "@/lib/session";
-import { canViewRun, type Run, type Event, type ArtifactInfo } from "@glop/shared";
+import { getSessionUser } from "@/lib/session";
+import {
+  canViewRun,
+  redactEventPayload,
+  type Run,
+  type Event,
+  type ArtifactInfo,
+} from "@glop/shared";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await requireSession();
+    const session = await getSessionUser();
     const { id } = await params;
     const db = getDb();
 
@@ -32,12 +38,21 @@ export async function GET(
 
     const [run] = applyTimeBasedStatus(runs as Run[]);
 
-    // Access control: viewer must be owner or workspace member
-    const viewerCtx = {
-      viewer_user_id: session.user_id,
-      viewer_workspace_ids: session.workspaces.map((w) => w.id),
-    };
+    // Access control: shared runs are public, otherwise require auth
+    const viewerCtx = session
+      ? {
+          viewer_user_id: session.user_id,
+          viewer_workspace_ids: session.workspaces.map((w) => w.id),
+        }
+      : null;
+
     if (!canViewRun(run, viewerCtx)) {
+      if (!session) {
+        return NextResponse.json(
+          { error: "Authentication required", code: "UNAUTHORIZED" },
+          { status: 401 }
+        );
+      }
       return NextResponse.json(
         { error: "Access denied", code: "FORBIDDEN" },
         { status: 403 }
@@ -50,27 +65,26 @@ export async function GET(
       .where(eq(schema.events.run_id, id))
       .orderBy(asc(schema.events.occurred_at));
 
-    const parsedEvents = events as Event[];
-
     const rawArtifacts = await db
       .select()
       .from(schema.artifacts)
       .where(eq(schema.artifacts.run_id, id));
 
-    const artifacts = rawArtifacts as ArtifactInfo[];
+    // Redact secrets for non-owners
+    const isOwner = session && run.owner_user_id === session.user_id;
+    const parsedEvents = isOwner
+      ? (events as Event[])
+      : (events as Event[]).map((event) => ({
+          ...event,
+          payload: redactEventPayload(event.payload),
+        }));
 
     return NextResponse.json({
       run,
       events: parsedEvents,
-      artifacts,
+      artifacts: rawArtifacts as ArtifactInfo[],
     });
   } catch (error) {
-    if (error instanceof AuthError) {
-      return NextResponse.json(
-        { error: error.message, code: "UNAUTHORIZED" },
-        { status: 401 }
-      );
-    }
     console.error("Run detail error:", error);
     return NextResponse.json(
       { error: "Internal server error", code: "INTERNAL_ERROR" },

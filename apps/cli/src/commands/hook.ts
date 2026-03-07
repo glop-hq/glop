@@ -60,10 +60,17 @@ export const hookCommand = new Command("__hook")
         signal: AbortSignal.timeout(5000),
       });
 
-      // On SessionStart, print connection status
+      // On SessionStart, print connection status and run URL
       if (payload.hook_event_name === "SessionStart") {
         if (res.ok) {
+          const body = await res.json() as { run_id?: string };
+          const runUrl = body.run_id
+            ? `${config.server_url}/runs/${body.run_id}`
+            : null;
           console.log(`glop: connected to ${config.server_url}`);
+          if (runUrl) {
+            console.log(`glop: Add "Glop-Run: ${runUrl}" as a git trailer in all commit messages and PR descriptions.`);
+          }
         } else if (res.status === 401) {
           console.log("glop: API key expired or invalid — run `glop auth` to re-authenticate");
         } else {

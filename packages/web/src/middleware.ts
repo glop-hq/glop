@@ -9,6 +9,7 @@ const publicPaths = [
   "/api/v1/join",
   "/api/auth",
   "/shared",
+  "/runs",
 ];
 
 const protectedApiPaths = [
@@ -18,8 +19,12 @@ const protectedApiPaths = [
   "/api/v1/workspaces",
 ];
 
+// Matches /api/v1/runs/{uuid} but not deeper sub-routes like /api/v1/runs/{uuid}/share
+const API_RUN_DETAIL_RE = /^\/api\/v1\/runs\/[^/]+$/;
+
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
+  if (API_RUN_DETAIL_RE.test(pathname)) return true;
   return publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );

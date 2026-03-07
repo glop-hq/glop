@@ -148,15 +148,24 @@ export interface ViewerContext {
 
 export function canViewRun(
   run: Run,
-  ctx: ViewerContext
+  ctx: ViewerContext | null
 ): boolean {
   // Owner can always see their own runs
-  if (run.owner_user_id && run.owner_user_id === ctx.viewer_user_id) {
+  if (ctx && run.owner_user_id && run.owner_user_id === ctx.viewer_user_id) {
     return true;
   }
 
   // Workspace members can see runs in their workspaces
-  if (ctx.viewer_workspace_ids.includes(run.workspace_id)) {
+  if (ctx && ctx.viewer_workspace_ids.includes(run.workspace_id)) {
+    return true;
+  }
+
+  // Shared runs are visible to anyone (if not expired)
+  if (run.shared_link_state === "active") {
+    if (run.shared_link_expires_at) {
+      const expiresAt = new Date(run.shared_link_expires_at).getTime();
+      if (Date.now() > expiresAt) return false;
+    }
     return true;
   }
 
