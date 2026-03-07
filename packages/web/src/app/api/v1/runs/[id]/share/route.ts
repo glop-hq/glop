@@ -91,32 +91,20 @@ export async function POST(
 
       const sharedLinkUrl = `${baseUrl}/shared/runs/${runId}`;
 
-      // Reactivate existing revoked link
-      if (run.shared_link_state === "revoked") {
-        await db
-          .update(schema.runs)
-          .set({ shared_link_state: "active", updated_at: now })
-          .where(eq(schema.runs.id, runId));
+      const neverExpires = expires_in_days === null;
+      const expiryDays = neverExpires ? null : (expires_in_days || DEFAULT_SHARE_EXPIRY_DAYS);
+      const expiresAt = expiryDays
+        ? new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString()
+        : null;
 
-        const resp: ShareRunResponse = {
-          visibility: run.visibility === "workspace" ? "workspace" : "private",
-          shared_link_active: true,
-          shared_link_url: sharedLinkUrl,
-          shared_link_expires_at: run.shared_link_expires_at ?? undefined,
-        };
-        return NextResponse.json(resp);
-      }
-
-      // First-time creation
-      const expiryDays = expires_in_days || DEFAULT_SHARE_EXPIRY_DAYS;
-      const expiresAt = new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000).toISOString();
+      const isFirstCreation = run.shared_link_state !== "revoked";
 
       await db
         .update(schema.runs)
         .set({
           shared_link_state: "active",
           shared_link_expires_at: expiresAt,
-          share_created_at: now,
+          ...(isFirstCreation ? { share_created_at: now } : {}),
           updated_at: now,
         })
         .where(eq(schema.runs.id, runId));
@@ -125,7 +113,7 @@ export async function POST(
         visibility: run.visibility === "workspace" ? "workspace" : "private",
         shared_link_active: true,
         shared_link_url: sharedLinkUrl,
-        shared_link_expires_at: expiresAt,
+        ...(expiresAt ? { shared_link_expires_at: expiresAt } : {}),
       };
       return NextResponse.json(resp);
     }

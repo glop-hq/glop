@@ -133,7 +133,7 @@ export const shareActionSchema = z.enum([
 
 export const shareRunSchema = z.object({
   action: shareActionSchema,
-  expires_in_days: z.number().int().min(1).max(365).optional(),
+  expires_in_days: z.number().int().min(1).max(365).nullable().optional(),
 });
 
 export const inviteLinkCreateSchema = z.object({

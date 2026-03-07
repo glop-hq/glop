@@ -94,7 +94,7 @@ export interface AuthMeResponse {
 
 export interface ShareRunRequest {
   action: "share_workspace" | "unshare_workspace" | "create_link" | "revoke_link";
-  expires_in_days?: number;
+  expires_in_days?: number | null;
 }
 
 export interface ShareRunResponse {

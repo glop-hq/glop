@@ -206,6 +206,15 @@ describe("shareRunSchema", () => {
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts null expires_in_days for never-expiring links", () => {
+    const result = shareRunSchema.safeParse({
+      action: "create_link",
+      expires_in_days: null,
+    });
+    expect(result.success).toBe(true);
+    expect(result.data?.expires_in_days).toBeNull();
+  });
 });
 
 describe("hookTypeSchema", () => {

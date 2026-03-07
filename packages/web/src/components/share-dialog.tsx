@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Popover } from "@/components/ui/popover";
 import { Share2, Users, Link2, Copy, Check, Loader2, XCircle } from "lucide-react";
 import type { Run, ShareRunResponse } from "@glop/shared";
+import { DEFAULT_SHARE_EXPIRY_DAYS } from "@glop/shared";
 
 interface ShareDialogProps {
   run: Run;
@@ -20,9 +21,10 @@ export function ShareDialog({ run, sharedLinkActive, onShareChange }: ShareDialo
   const [sharedUrl, setSharedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expiryOption, setExpiryOption] = useState<"default" | "never">("default");
 
   const callShare = useCallback(
-    async (action: ShareAction, expiresInDays?: number) => {
+    async (action: ShareAction, expiresInDays?: number | null) => {
       setLoading(action);
       setError(null);
       try {
@@ -31,7 +33,9 @@ export function ShareDialog({ run, sharedLinkActive, onShareChange }: ShareDialo
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             action,
-            ...(expiresInDays ? { expires_in_days: expiresInDays } : {}),
+            ...(expiresInDays !== undefined
+              ? { expires_in_days: expiresInDays }
+              : {}),
           }),
         });
 
@@ -163,7 +167,12 @@ export function ShareDialog({ run, sharedLinkActive, onShareChange }: ShareDialo
                 variant="outline"
                 className="h-7 px-2 cursor-pointer text-xs"
                 disabled={loading !== null}
-                onClick={() => callShare("create_link")}
+                onClick={() =>
+                  callShare(
+                    "create_link",
+                    expiryOption === "never" ? null : DEFAULT_SHARE_EXPIRY_DAYS
+                  )
+                }
               >
                 {loading === "create_link" ? (
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -197,16 +206,31 @@ export function ShareDialog({ run, sharedLinkActive, onShareChange }: ShareDialo
             </div>
           )}
 
-          {sharedLinkActive && run.shared_link_expires_at && (
+          {sharedLinkActive && (
             <p className="text-xs text-muted-foreground">
-              Expires {new Date(run.shared_link_expires_at).toLocaleDateString()}
+              {run.shared_link_expires_at
+                ? `Expires ${new Date(run.shared_link_expires_at).toLocaleDateString()}`
+                : "Never expires"}
             </p>
           )}
 
           {!sharedLinkActive && (
-            <p className="text-xs text-muted-foreground">
-              Anyone with the link can view this run.
-            </p>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground">
+                Anyone with the link can view this run.
+              </p>
+              <div className="flex items-center gap-2">
+                <label className="text-xs text-muted-foreground">Expires:</label>
+                <select
+                  value={expiryOption}
+                  onChange={(e) => setExpiryOption(e.target.value as "default" | "never")}
+                  className="h-7 rounded-md border bg-background px-2 text-xs cursor-pointer"
+                >
+                  <option value="default">{DEFAULT_SHARE_EXPIRY_DAYS} days</option>
+                  <option value="never">Never</option>
+                </select>
+              </div>
+            </div>
           )}
         </div>
       </div>
