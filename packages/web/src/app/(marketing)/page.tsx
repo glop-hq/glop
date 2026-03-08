@@ -49,8 +49,8 @@ export default function LandingPage() {
           <div className="mt-8 flex flex-col items-center gap-4">
             <div className="inline-flex items-center gap-3 rounded-lg border bg-zinc-950 px-4 py-2.5 font-mono text-sm text-zinc-300">
               <Terminal className="h-4 w-4 text-zinc-500" />
-              <span>npm install -g glop.dev</span>
-              <CopyButton text="npm install -g glop.dev" />
+              <span>npm i -g glop.dev</span>
+              <CopyButton text="npm i -g glop.dev" />
             </div>
             <div className="flex items-center gap-4">
               <Link
@@ -286,8 +286,8 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 inline-flex items-center gap-3 rounded-lg border bg-zinc-950 px-4 py-2.5 font-mono text-sm text-zinc-300">
             <Terminal className="h-4 w-4 text-zinc-500" />
-            <span>npm install -g glop.dev</span>
-            <CopyButton text="npm install -g glop.dev" />
+            <span>npm i -g glop.dev</span>
+            <CopyButton text="npm i -g glop.dev" />
           </div>
         </div>
       </section>
