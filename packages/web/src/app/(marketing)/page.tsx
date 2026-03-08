@@ -294,8 +294,18 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-6 sm:px-6">
-          <span className="text-sm text-muted-foreground">glop</span>
+        <div className="mx-auto flex max-w-5xl flex-col gap-4 px-4 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+            <span className="text-sm font-medium">glop</span>
+            <span className="text-xs text-muted-foreground">
+              &copy; {new Date().getFullYear()} Glop. All rights reserved.
+            </span>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-muted-foreground">
+            <span>Built from San Francisco</span>
+            <Link href="/terms" className="cursor-pointer transition-colors hover:text-foreground">Terms</Link>
+            <Link href="/privacy" className="cursor-pointer transition-colors hover:text-foreground">Privacy</Link>
+          </div>
         </div>
       </footer>
     </div>
