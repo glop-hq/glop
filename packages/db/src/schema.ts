@@ -92,6 +92,10 @@ export const sharedLinkStateEnum = pgEnum("shared_link_state", [
   "revoked",
 ]);
 
+export const accessRequestStatusEnum = pgEnum("access_request_status", [
+  "pending",
+]);
+
 // ── Tables ─────────────────────────────────────────────
 
 export const users = pgTable(
@@ -349,6 +353,33 @@ export const workspace_invite_links = pgTable(
       .notNull()
       .defaultNow(),
   }
+);
+
+export const access_requests = pgTable(
+  "access_requests",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id, { onDelete: "cascade" }),
+    requester_user_id: uuid("requester_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    owner_user_id: uuid("owner_user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    status: accessRequestStatusEnum("status").notNull().default("pending"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("access_requests_run_requester_idx").on(
+      table.run_id,
+      table.requester_user_id
+    ),
+    index("access_requests_owner_user_id_idx").on(table.owner_user_id),
+  ]
 );
 
 export const api_keys = pgTable("api_keys", {

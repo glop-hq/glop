@@ -50,7 +50,15 @@ export async function GET(
     if (!canViewRun(run, viewerCtx)) {
       if (!session) {
         return NextResponse.json(
-          { error: "Authentication required", code: "UNAUTHORIZED" },
+          {
+            error: "Authentication required",
+            code: "UNAUTHORIZED",
+            preview: {
+              title: run.title ?? null,
+              started_at: run.started_at ?? null,
+              status: run.status ?? null,
+            },
+          },
           { status: 401 }
         );
       }

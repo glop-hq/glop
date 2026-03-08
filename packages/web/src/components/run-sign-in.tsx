@@ -1,25 +1,39 @@
 "use client";
 
+import Image from "next/image";
 import { signIn } from "next-auth/react";
-import { Terminal } from "lucide-react";
+import type { RunPreview } from "@/components/run-detail-page";
 
-export function RunSignIn({ runId }: { runId: string }) {
+export function RunSignIn({
+  runId,
+  preview,
+}: {
+  runId: string;
+  preview?: RunPreview | null;
+}) {
   const callbackUrl = `/runs/${runId}`;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm">
-        <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-secondary">
-            <Terminal className="h-6 w-6 text-muted-foreground" />
-          </div>
+        <div className="mb-6 text-center">
+          <Image
+            src="/logo-square.svg"
+            alt="glop"
+            width={40}
+            height={40}
+            className="mx-auto mb-4 rounded-lg"
+          />
+
           <h1 className="text-xl font-bold tracking-tight">
             Sign in to view this session
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            This is a glop development session. Sign in to view the full
-            timeline.
-          </p>
+
+          {preview?.title && (
+            <p className="mt-2 text-sm text-muted-foreground">
+              {preview.title}
+            </p>
+          )}
         </div>
 
         <div className="flex flex-col gap-3">
@@ -63,15 +77,6 @@ export function RunSignIn({ runId }: { runId: string }) {
           </button>
         </div>
 
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          Powered by{" "}
-          <a
-            href="https://glop.dev"
-            className="cursor-pointer underline hover:text-foreground"
-          >
-            glop
-          </a>
-        </p>
       </div>
     </div>
   );
