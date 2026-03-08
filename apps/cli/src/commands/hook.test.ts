@@ -5,6 +5,7 @@ vi.mock("fs", () => ({
   openSync: vi.fn(),
   readSync: vi.fn(),
   closeSync: vi.fn(),
+  readFileSync: vi.fn(),
 }));
 vi.mock("../lib/config.js", () => ({
   loadConfig: vi.fn(),
@@ -16,7 +17,7 @@ vi.mock("../lib/git.js", () => ({
   getGitUserEmail: vi.fn(),
 }));
 
-const { openSync, readSync, closeSync } = await import("fs");
+const { openSync, readSync, closeSync, readFileSync } = await import("fs");
 const { loadConfig } = await import("../lib/config.js");
 const { getRepoKey, getBranch, getGitUserName, getGitUserEmail } = await import("../lib/git.js");
 const { hookCommand } = await import("./hook.js");
@@ -40,15 +41,21 @@ function withMockStdin(data: string, fn: () => Promise<void>) {
   });
 }
 
-function mockTranscriptRead(content: string) {
+function mockTranscriptRead(content: string, opts?: { slugBeyondBuffer?: boolean }) {
+  const bytes = Buffer.from(content);
   vi.mocked(openSync).mockReturnValue(42);
   vi.mocked(readSync).mockImplementation((_fd, buf: Buffer) => {
-    const bytes = Buffer.from(content);
+    if (opts?.slugBeyondBuffer) {
+      // Simulate a file >256KB where slug is beyond the buffer
+      buf.fill(0x20); // fill with spaces (no slug pattern)
+      return buf.length; // report full 256KB read
+    }
     const toCopy = Math.min(bytes.length, buf.length);
     bytes.copy(buf, 0, 0, toCopy);
     return toCopy;
   });
   vi.mocked(closeSync).mockReturnValue(undefined);
+  vi.mocked(readFileSync).mockReturnValue(content);
 }
 
 describe("__hook command", () => {
@@ -243,7 +250,7 @@ describe("__hook command", () => {
     expect(body.slug).toBe("woolly-scribbling-kay");
   });
 
-  it("extracts slug that appears after several non-slug lines", async () => {
+  it("falls back to full file read when slug is beyond 256KB", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       server_url: "http://localhost:3000",
       api_key: "glop_test",
@@ -253,28 +260,21 @@ describe("__hook command", () => {
     });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
-    const lines = [
-      '{"type":"file-history-snapshot","messageId":"aaa"}',
-      '{"type":"progress","sessionId":"ses-1"}',
-      '{"type":"user","sessionId":"ses-1"}',
-      '{"type":"user","sessionId":"ses-1"}',
-      '{"type":"user","sessionId":"ses-1"}',
-      '{"type":"file-history-snapshot","messageId":"bbb"}',
-      '{"type":"user","sessionId":"ses-1","slug":"late-arriving-slug"}',
-      '{"type":"assistant","sessionId":"ses-1","slug":"late-arriving-slug"}',
-    ];
-    mockTranscriptRead(lines.join("\n") + "\n");
+    // Slug appears after large CLAUDE.md content, beyond the 256KB buffer
+    const content = '{"type":"user","slug":"deep-nested-slug"}\n';
+    mockTranscriptRead(content, { slugBeyondBuffer: true });
 
     await withMockStdin(
       JSON.stringify({
-        hook_event_name: "SessionStart",
+        hook_event_name: "Stop",
         transcript_path: "/tmp/transcript.jsonl",
       }),
       () => hookCommand.parseAsync([], { from: "user" })
     );
 
+    expect(readFileSync).toHaveBeenCalledWith("/tmp/transcript.jsonl", "utf-8");
     const body = JSON.parse(fetchSpy.mock.calls[0][1].body);
-    expect(body.slug).toBe("late-arriving-slug");
+    expect(body.slug).toBe("deep-nested-slug");
   });
 
   it("skips slug when transcript file is missing", async () => {

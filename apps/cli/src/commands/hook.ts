@@ -1,17 +1,21 @@
 import { Command } from "commander";
-import { openSync, readSync, closeSync } from "fs";
+import { openSync, readSync, closeSync, readFileSync } from "fs";
 import { loadConfig } from "../lib/config.js";
 import { getRepoKey, getBranch, getGitUserName, getGitUserEmail } from "../lib/git.js";
 
 function extractSlugFromTranscript(transcriptPath: string): string | null {
   try {
     const fd = openSync(transcriptPath, "r");
-    const buf = Buffer.alloc(65536);
-    const bytesRead = readSync(fd, buf, 0, 65536, 0);
+    const buf = Buffer.alloc(262144); // 256KB
+    const bytesRead = readSync(fd, buf, 0, 262144, 0);
     closeSync(fd);
     const head = buf.toString("utf-8", 0, bytesRead);
     const match = head.match(/"slug":"([^"]+)"/);
-    return match ? match[1] : null;
+    if (match) return match[1];
+    if (bytesRead < 262144) return null; // already read the whole file
+    // Fallback: read entire file for edge cases (>256KB before slug)
+    const full = readFileSync(transcriptPath, "utf-8");
+    return full.match(/"slug":"([^"]+)"/)?.[1] ?? null;
   } catch {
     return null;
   }
