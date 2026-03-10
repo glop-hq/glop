@@ -1,5 +1,6 @@
 import { Command } from "commander";
-import { saveConfig, getMachineId, getDefaultServerUrl } from "../lib/config.js";
+import { loadGlobalConfig, saveGlobalConfig, getMachineId, getDefaultServerUrl } from "../lib/config.js";
+import type { GlopGlobalConfig } from "../lib/config.js";
 import { openBrowser, findOpenPort, waitForCallback } from "../lib/auth-flow.js";
 
 export const authCommand = new Command("auth")
@@ -24,16 +25,30 @@ export const authCommand = new Command("auth")
 
     const result = await waitForCallback(port);
 
-    saveConfig({
+    // Merge into existing global config (preserves other workspaces)
+    const existing = loadGlobalConfig();
+    const globalConfig: GlopGlobalConfig = existing || {
       server_url: serverUrl,
-      api_key: result.api_key,
-      developer_id: result.developer_id,
-      developer_name: result.developer_name,
       machine_id: machineId,
-      workspace_id: result.workspace_id,
-      workspace_name: result.workspace_name,
-      workspace_slug: result.workspace_slug,
-    });
+      developer_name: result.developer_name,
+      workspaces: {},
+    };
+
+    globalConfig.server_url = serverUrl;
+    globalConfig.machine_id = machineId;
+    globalConfig.developer_name = result.developer_name;
+
+    if (result.workspace_id) {
+      globalConfig.workspaces[result.workspace_id] = {
+        api_key: result.api_key,
+        developer_id: result.developer_id,
+        workspace_name: result.workspace_name,
+        workspace_slug: result.workspace_slug,
+      };
+      globalConfig.default_workspace = result.workspace_id;
+    }
+
+    saveGlobalConfig(globalConfig);
 
     console.log("\nAuthenticated successfully!");
     console.log(`  Developer:  ${result.developer_name}`);

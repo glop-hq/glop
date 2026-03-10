@@ -1,7 +1,9 @@
 import { Command } from "commander";
-import { loadConfig, saveConfig, getMachineId } from "../lib/config.js";
+import { loadConfig, loadGlobalConfig, saveGlobalConfig, loadRepoConfig, saveRepoConfig, getMachineId } from "../lib/config.js";
+import type { GlopGlobalConfig } from "../lib/config.js";
 import { openBrowser, findOpenPort, waitForCallback } from "../lib/auth-flow.js";
 import { interactiveSelect } from "../lib/select.js";
+import { getRepoRoot } from "../lib/git.js";
 
 interface Workspace {
   id: string;
@@ -59,7 +61,9 @@ export const workspaceCommand = new Command("workspace")
       process.exit(0);
     }
 
-    const currentId = data.current_workspace_id;
+    // Determine current workspace: repo binding > default
+    const repoConfig = loadRepoConfig();
+    const currentId = repoConfig?.workspace_id || config.workspace_id || data.current_workspace_id;
 
     // Non-TTY: just print current workspace
     if (!process.stdin.isTTY) {
@@ -100,7 +104,24 @@ export const workspaceCommand = new Command("workspace")
       process.exit(0);
     }
 
-    // Switch workspace via browser auth flow
+    // Check if we already have credentials for this workspace
+    const globalConfig = loadGlobalConfig()!;
+    const existingCreds = globalConfig.workspaces[selectedWorkspace.id];
+    const repoRoot = getRepoRoot();
+
+    if (existingCreds) {
+      // Credentials already exist — just bind the repo (or update default)
+      if (repoRoot) {
+        saveRepoConfig({ workspace_id: selectedWorkspace.id });
+      } else {
+        globalConfig.default_workspace = selectedWorkspace.id;
+        saveGlobalConfig(globalConfig);
+      }
+      console.log(`\n  Switched to ${selectedWorkspace.name}!`);
+      process.exit(0);
+    }
+
+    // No credentials — trigger browser auth flow
     console.log(`\n  Switching to ${selectedWorkspace.name}...`);
     console.log("  Opening browser for authorization...\n");
 
@@ -116,16 +137,25 @@ export const workspaceCommand = new Command("workspace")
 
     const result = await waitForCallback(port);
 
-    saveConfig({
-      ...config,
+    // Save credentials globally
+    const wsId = result.workspace_id || selectedWorkspace.id;
+    globalConfig.workspaces[wsId] = {
       api_key: result.api_key,
       developer_id: result.developer_id,
-      developer_name: result.developer_name,
-      machine_id: machineId,
-      workspace_id: result.workspace_id,
       workspace_name: result.workspace_name,
       workspace_slug: result.workspace_slug,
-    });
+    };
+    globalConfig.developer_name = result.developer_name;
+
+    if (repoRoot) {
+      // Bind this workspace to the repo
+      saveRepoConfig({ workspace_id: wsId });
+    } else {
+      // No repo — update the global default
+      globalConfig.default_workspace = wsId;
+    }
+
+    saveGlobalConfig(globalConfig);
 
     console.log(`\n  Switched to ${result.workspace_name || selectedWorkspace.name}!`);
     process.exit(0);

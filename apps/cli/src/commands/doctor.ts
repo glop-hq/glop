@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { loadConfig } from "../lib/config.js";
+import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey, getBranch } from "../lib/git.js";
 import { execSync } from "child_process";
 import fs from "fs";
@@ -31,8 +31,10 @@ export const doctorCommand = new Command("doctor")
       console.log();
       process.exit(1);
     }
+    const repoBinding = loadRepoConfig();
+    const wsSource = repoBinding?.workspace_id ? "repo binding" : "default";
     const authDetail = config.workspace_name
-      ? `${config.developer_name} on ${config.server_url} (${config.workspace_name})`
+      ? `${config.developer_name} on ${config.server_url} (${config.workspace_name}, ${wsSource})`
       : `${config.developer_name} on ${config.server_url}`;
     check("pass", "Authenticated", authDetail);
 
