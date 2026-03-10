@@ -14,13 +14,16 @@ function CliAuthContent() {
   const [error, setError] = useState<string | null>(null);
   const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
 
+  const port = searchParams.get("port");
+  const preselectedWorkspaceId = searchParams.get("workspace_id");
+
   useEffect(() => {
-    if (currentWorkspace && !selectedWorkspaceId) {
+    if (preselectedWorkspaceId && !selectedWorkspaceId && workspaces.some((w) => w.id === preselectedWorkspaceId)) {
+      setSelectedWorkspaceId(preselectedWorkspaceId);
+    } else if (currentWorkspace && !selectedWorkspaceId) {
       setSelectedWorkspaceId(currentWorkspace.id);
     }
-  }, [currentWorkspace, selectedWorkspaceId]);
-
-  const port = searchParams.get("port");
+  }, [currentWorkspace, selectedWorkspaceId, preselectedWorkspaceId, workspaces]);
 
   if (!port) {
     return (

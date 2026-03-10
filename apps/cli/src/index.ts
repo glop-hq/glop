@@ -6,6 +6,7 @@ import { deactivateCommand } from "./commands/deactivate.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { hookCommand } from "./commands/hook.js";
 import { initCommand } from "./commands/init.js";
+import { workspaceCommand } from "./commands/workspace.js";
 import { checkForUpdate } from "./lib/update-check.js";
 import pkg from "../package.json";
 
@@ -19,6 +20,7 @@ program.addCommand(deactivateCommand);
 program.addCommand(doctorCommand);
 program.addCommand(hookCommand, { hidden: true });
 program.addCommand(initCommand);
+program.addCommand(workspaceCommand);
 program.hook("postAction", async (_thisCommand, actionCommand) => {
   if (actionCommand.name() === "__hook") return;
   await checkForUpdate(pkg.version);

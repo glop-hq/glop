@@ -12,6 +12,9 @@ export interface GlopConfig {
   developer_id: string;
   developer_name: string;
   machine_id: string;
+  workspace_id?: string;
+  workspace_name?: string;
+  workspace_slug?: string;
 }
 
 function ensureConfigDir() {

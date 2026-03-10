@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { eq } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
 import { registerDeveloper } from "@/lib/auth";
 import { requireSession, AuthError } from "@/lib/session";
 import {
@@ -39,10 +40,24 @@ export async function POST(request: NextRequest) {
       session.user_id
     );
 
+    // Fetch workspace details for the CLI callback
+    const [workspace] = await db
+      .select({
+        name: schema.workspaces.name,
+        slug: schema.workspaces.slug,
+      })
+      .from(schema.workspaces)
+      .where(eq(schema.workspaces.id, workspaceId));
+
     const params = new URLSearchParams({
       api_key: result.api_key,
       developer_id: result.developer_id,
       developer_name: session.name || session.email,
+      workspace_id: workspaceId,
+      ...(workspace && {
+        workspace_name: workspace.name,
+        workspace_slug: workspace.slug,
+      }),
     });
 
     const redirectUrl = `http://127.0.0.1:${callbackPort}/callback?${params}`;

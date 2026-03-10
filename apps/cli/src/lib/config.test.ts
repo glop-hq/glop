@@ -44,6 +44,26 @@ describe("config", () => {
       expect(loadConfig()).toEqual(config);
     });
 
+    it("returns parsed config with optional workspace fields", () => {
+      const config = {
+        server_url: "http://localhost:3000",
+        api_key: "glop_test",
+        developer_id: "dev-1",
+        developer_name: "Test",
+        machine_id: "machine-1",
+        workspace_id: "ws-1",
+        workspace_name: "Acme Corp",
+        workspace_slug: "acme-corp-abc123",
+      };
+      vi.mocked(fs.existsSync).mockReturnValue(true);
+      vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(config));
+      const loaded = loadConfig();
+      expect(loaded).toEqual(config);
+      expect(loaded!.workspace_id).toBe("ws-1");
+      expect(loaded!.workspace_name).toBe("Acme Corp");
+      expect(loaded!.workspace_slug).toBe("acme-corp-abc123");
+    });
+
     it("returns null when config file is invalid JSON", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue("not json");

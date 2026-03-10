@@ -31,7 +31,10 @@ export const doctorCommand = new Command("doctor")
       console.log();
       process.exit(1);
     }
-    check("pass", "Authenticated", `${config.developer_name} on ${config.server_url}`);
+    const authDetail = config.workspace_name
+      ? `${config.developer_name} on ${config.server_url} (${config.workspace_name})`
+      : `${config.developer_name} on ${config.server_url}`;
+    check("pass", "Authenticated", authDetail);
 
     // 2. Server reachable + API key valid
     try {
