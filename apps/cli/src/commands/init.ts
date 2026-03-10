@@ -100,5 +100,6 @@ export const initCommand = new Command("init")
 
     fs.writeFileSync(settingsFile, JSON.stringify(settings, null, 2));
 
-    console.log(`${hadHooks ? "✓ glop updated" : "✓ glop connected"} — sessions will appear at ${config.server_url}/live`);
+    const workspace = config.workspace_name || config.workspace_slug || config.workspace_id || "default";
+    console.log(`${hadHooks ? "✓ glop updated" : "✓ glop connected"} to workspace "${workspace}" — sessions will appear at ${config.server_url}/live`);
   });
