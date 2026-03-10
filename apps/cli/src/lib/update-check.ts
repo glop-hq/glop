@@ -70,7 +70,7 @@ export async function checkForUpdate(currentVersion: string): Promise<void> {
 
     if (isNewerVersion(currentVersion, latestVersion)) {
       console.error(
-        `\n  Update available: ${currentVersion} → ${latestVersion}. Run \`npm i -g glop.dev\` to update.\n`
+        `\n  Update available: ${currentVersion} → ${latestVersion}. Run \`glop update\` to update.\n`
       );
     }
   } catch {
