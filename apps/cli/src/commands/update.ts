@@ -7,7 +7,8 @@ export const updateCommand = new Command("update")
     console.log("Updating glop…");
     try {
       execSync("npm install -g glop.dev@latest", { stdio: "inherit" });
-      console.log("\nglop has been updated successfully.");
+      const version = execSync("glop --version", { encoding: "utf-8" }).trim();
+      console.log(`\nglop has been updated successfully to v${version}.`);
     } catch {
       process.exitCode = 1;
     }
