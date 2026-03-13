@@ -12,6 +12,7 @@
   "dependencies": {
     "@glop/db": "workspace:*",
     "@glop/shared": "workspace:*",
+    "@sentry/nextjs": "^10.43.0",
     "@tailwindcss/typography": "^0.5.19",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -20,6 +21,8 @@
     "next": "^15.1.0",
     "next-auth": "5.0.0-beta.30",
     "pg": "^8.13.0",
+    "posthog-js": "^1.360.1",
+    "posthog-node": "^5.28.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",

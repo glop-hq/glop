@@ -7,6 +7,16 @@ import { Suspense } from "react";
 function LoginContent() {
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/live";
+  const error = searchParams.get("error");
+
+  const errorMessage =
+    error === "AccessDenied"
+      ? "Unable to sign in. Please try again later."
+      : error === "Configuration"
+        ? "There is a problem with the server configuration."
+        : error
+          ? "Something went wrong. Please try again."
+          : null;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
@@ -19,6 +29,12 @@ function LoginContent() {
             Live development board for your team
           </p>
         </div>
+
+        {errorMessage && (
+          <div className="mb-4 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <button
