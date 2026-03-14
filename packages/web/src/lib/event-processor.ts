@@ -41,6 +41,8 @@ function hookToEventType(classified: ClassifiedHook, isNewRun: boolean): EventTy
       return "run.response";
     case "permission_request":
       return "run.permission_request";
+    case "context_compacted":
+      return "run.context_compacted";
     case "session_end":
       return "run.completed";
     case "session_start":

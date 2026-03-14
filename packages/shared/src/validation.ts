@@ -50,6 +50,7 @@ export const eventTypeSchema = z.enum([
   "run.permission_request",
   "run.title_updated",
   "run.summary_updated",
+  "run.context_compacted",
   "artifact.added",
   "artifact.updated",
 ]);
@@ -143,4 +144,10 @@ export const inviteLinkCreateSchema = z.object({
 export const inviteLinkUpdateSchema = z.object({
   enabled: z.boolean().optional(),
   role: memberRoleSchema.optional(),
+});
+
+export const analyticsPeriodSchema = z.enum(["7d", "30d", "90d"]);
+
+export const analyticsQuerySchema = z.object({
+  period: analyticsPeriodSchema.default("7d"),
 });

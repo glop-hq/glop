@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Radio, Clock, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Radio, Clock, BarChart3, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { Popover } from "@/components/ui/popover";
@@ -14,6 +14,7 @@ import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 const navItems = [
   { href: "/live", label: "Live Now", icon: Radio },
   { href: "/history", label: "History", icon: Clock },
+  { href: "/insights", label: "Insights", icon: BarChart3 },
 ];
 
 export function NavHeader() {

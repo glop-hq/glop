@@ -1,6 +1,6 @@
 import type { ActivityKind, RunPhase, RawHookPayload } from "@glop/shared";
 
-export type ContentType = "prompt" | "response" | "tool_use" | "permission_request" | "session_start" | "session_end" | "heartbeat";
+export type ContentType = "prompt" | "response" | "tool_use" | "permission_request" | "session_start" | "session_end" | "context_compacted" | "heartbeat";
 
 export interface ClassifiedHook {
   activity_kind: ActivityKind;
@@ -103,6 +103,26 @@ export function classifyHookPayload(
       is_session_start: false,
       content_type: "prompt",
       content: typeof payload.prompt === "string" ? payload.prompt : undefined,
+    };
+  }
+
+  // PreCompact — context compaction is about to happen
+  if (hookType === "PreCompact") {
+    const trigger =
+      typeof payload.source === "string"
+        ? payload.source
+        : typeof payload.trigger === "string"
+          ? payload.trigger
+          : "unknown";
+    return {
+      activity_kind: "unknown",
+      phase: "editing",
+      action_label: `Context compacted (${trigger})`,
+      files_touched: [],
+      is_completion: false,
+      is_session_start: false,
+      content_type: "context_compacted",
+      content: trigger,
     };
   }
 

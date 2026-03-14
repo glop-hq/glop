@@ -87,6 +87,7 @@ export function deriveRunPatch(
 
     case "run.title_updated":
     case "run.summary_updated":
+    case "run.context_compacted":
     case "artifact.added":
     case "artifact.updated":
       // These don't change run phase/status

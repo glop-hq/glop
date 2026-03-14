@@ -63,6 +63,7 @@ export const eventTypeEnum = pgEnum("event_type", [
   "run.permission_request",
   "run.title_updated",
   "run.summary_updated",
+  "run.context_compacted",
   "artifact.added",
   "artifact.updated",
 ]);
