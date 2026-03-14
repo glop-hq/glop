@@ -14,7 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash } from "lucide-react";
+import { ArrowLeft, ArrowRight, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash, MessageSquare, Layers, GitCommit, GitPullRequest } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
@@ -62,6 +62,21 @@ export function RunDetailView({ runId }: { runId: string }) {
   const { run, events, artifacts } = data;
   const currentVisibility = visibility ?? (run.visibility === "workspace" ? "workspace" : "private");
   const currentLinkActive = sharedLinkActive ?? (run.shared_link_state === "active");
+
+  // Compute run stats from events and artifacts
+  const conversationTurns = events.filter(
+    (e) => e.event_type === "run.prompt" || e.event_type === "run.response"
+  ).length;
+  const compactionEvents = events.filter(
+    (e) => e.event_type === "run.context_compacted"
+  );
+  const compactionCount = compactionEvents.length;
+  const autoCompactions = compactionEvents.filter(
+    (e) => e.payload?.content === "auto"
+  ).length;
+  const manualCompactions = compactionCount - autoCompactions;
+  const commitCount = artifacts.filter((a) => a.artifact_type === "commit").length;
+  const prCount = artifacts.filter((a) => a.artifact_type === "pr").length;
 
   const handleShareChange = (resp: ShareRunResponse) => {
     setVisibility(resp.visibility);
@@ -162,6 +177,45 @@ export function RunDetailView({ runId }: { runId: string }) {
           ))}
         </div>
       )}
+
+      {/* Run Stats */}
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <MessageSquare className="h-3.5 w-3.5" />
+            Conversation Turns
+          </div>
+          <p className="mt-1 text-lg font-semibold">{conversationTurns}</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <Layers className="h-3.5 w-3.5" />
+            Compactions
+          </div>
+          <p className="mt-1 text-lg font-semibold">
+            {compactionCount}
+            {compactionCount > 0 && (
+              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
+                ({autoCompactions} auto, {manualCompactions} manual)
+              </span>
+            )}
+          </p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <GitCommit className="h-3.5 w-3.5" />
+            Commits
+          </div>
+          <p className="mt-1 text-lg font-semibold">{commitCount}</p>
+        </div>
+        <div className="rounded-lg border p-3">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <GitPullRequest className="h-3.5 w-3.5" />
+            Pull Requests
+          </div>
+          <p className="mt-1 text-lg font-semibold">{prCount}</p>
+        </div>
+      </div>
 
       {/* Summary */}
       {run.summary && (
