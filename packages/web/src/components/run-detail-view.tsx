@@ -13,8 +13,9 @@ import { RelativeTime } from "./relative-time";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Tooltip } from "@/components/ui/tooltip";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, GitBranch, Monitor, FileCode, Clock, FolderGit2, Hash, MessageSquare, Layers, GitCommit, GitPullRequest } from "lucide-react";
+import { ArrowLeft, ArrowRight, GitBranch, FileCode, Clock, FolderGit2, Info, MessageSquare, Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Run, RunStatus, ShareRunResponse } from "@glop/shared";
 import type { SessionWorkspace } from "@/lib/session";
@@ -63,20 +64,13 @@ export function RunDetailView({ runId }: { runId: string }) {
   const currentVisibility = visibility ?? (run.visibility === "workspace" ? "workspace" : "private");
   const currentLinkActive = sharedLinkActive ?? (run.shared_link_state === "active");
 
-  // Compute run stats from events and artifacts
+  // Compute run stats from events
   const conversationTurns = events.filter(
     (e) => e.event_type === "run.prompt" || e.event_type === "run.response"
   ).length;
-  const compactionEvents = events.filter(
+  const compactionCount = events.filter(
     (e) => e.event_type === "run.context_compacted"
-  );
-  const compactionCount = compactionEvents.length;
-  const autoCompactions = compactionEvents.filter(
-    (e) => e.payload?.content === "auto"
   ).length;
-  const manualCompactions = compactionCount - autoCompactions;
-  const commitCount = artifacts.filter((a) => a.artifact_type === "commit").length;
-  const prCount = artifacts.filter((a) => a.artifact_type === "pr").length;
 
   const handleShareChange = (resp: ShareRunResponse) => {
     setVisibility(resp.visibility);
@@ -105,14 +99,6 @@ export function RunDetailView({ runId }: { runId: string }) {
             {run.title || `Run ${run.id.slice(0, 8)}`}
           </h1>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-muted-foreground">
-            <span className="flex items-center gap-1 shrink-0">
-              <Monitor className="h-3.5 w-3.5 shrink-0" />
-              {run.git_user_name || run.developer_id.slice(0, 8)}
-            </span>
-            <span className="flex items-center gap-1 shrink-0">
-              <Clock className="h-3.5 w-3.5 shrink-0" />
-              <RelativeTime date={run.started_at} />
-            </span>
             <span className="flex items-center gap-1 font-mono min-w-0">
               <FolderGit2 className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{run.repo_key}</span>
@@ -122,15 +108,21 @@ export function RunDetailView({ runId }: { runId: string }) {
               <span className="truncate">{run.branch_name}</span>
             </span>
             <span className="flex items-center gap-1 shrink-0">
-              <FileCode className="h-3.5 w-3.5 shrink-0" />
-              {run.file_count} files
+              <Clock className="h-3.5 w-3.5 shrink-0" />
+              <RelativeTime date={run.started_at} />
             </span>
-            {run.slug && (
-              <span className="flex items-center gap-1 font-mono min-w-0">
-                <Hash className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{run.slug}</span>
-              </span>
-            )}
+            <span className="flex items-center gap-1 shrink-0">
+              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+              {conversationTurns} {conversationTurns === 1 ? "turn" : "turns"}
+            </span>
+            <span className="flex items-center gap-1 shrink-0">
+              <FileCode className="h-3.5 w-3.5 shrink-0" />
+              {run.file_count} {run.file_count === 1 ? "file" : "files"}
+            </span>
+            <span className="flex items-center gap-1 shrink-0">
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+              {compactionCount} {compactionCount === 1 ? "compaction" : "compactions"}
+            </span>
           </div>
           {artifacts.length > 0 && (
             <div className="mt-2">
@@ -139,6 +131,16 @@ export function RunDetailView({ runId }: { runId: string }) {
           )}
         </div>
         <div className="flex items-center gap-3">
+          <Tooltip
+            content={[
+              `Developer: ${run.git_user_name || run.developer_id.slice(0, 8)}`,
+              run.slug ? `Slug: ${run.slug}` : null,
+            ].filter(Boolean).join("\n")}
+          >
+            <span className="text-muted-foreground hover:text-foreground transition-colors cursor-default">
+              <Info className="h-4 w-4" />
+            </span>
+          </Tooltip>
           {run.status !== "completed" && run.status !== "failed" && (
             <PhaseBadge phase={run.phase} />
           )}
@@ -177,45 +179,6 @@ export function RunDetailView({ runId }: { runId: string }) {
           ))}
         </div>
       )}
-
-      {/* Run Stats */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border p-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <MessageSquare className="h-3.5 w-3.5" />
-            Conversation Turns
-          </div>
-          <p className="mt-1 text-lg font-semibold">{conversationTurns}</p>
-        </div>
-        <div className="rounded-lg border p-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Layers className="h-3.5 w-3.5" />
-            Compactions
-          </div>
-          <p className="mt-1 text-lg font-semibold">
-            {compactionCount}
-            {compactionCount > 0 && (
-              <span className="ml-1.5 text-xs font-normal text-muted-foreground">
-                ({autoCompactions} auto, {manualCompactions} manual)
-              </span>
-            )}
-          </p>
-        </div>
-        <div className="rounded-lg border p-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <GitCommit className="h-3.5 w-3.5" />
-            Commits
-          </div>
-          <p className="mt-1 text-lg font-semibold">{commitCount}</p>
-        </div>
-        <div className="rounded-lg border p-3">
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <GitPullRequest className="h-3.5 w-3.5" />
-            Pull Requests
-          </div>
-          <p className="mt-1 text-lg font-semibold">{prCount}</p>
-        </div>
-      </div>
 
       {/* Summary */}
       {run.summary && (
