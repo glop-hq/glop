@@ -150,4 +150,5 @@ export const analyticsPeriodSchema = z.enum(["7d", "30d", "90d"]);
 
 export const analyticsQuerySchema = z.object({
   period: analyticsPeriodSchema.default("7d"),
+  developer_id: z.string().optional(),
 });

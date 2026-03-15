@@ -59,6 +59,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = analyticsQuerySchema.safeParse({
       period: searchParams.get("period") ?? undefined,
+      developer_id: searchParams.get("developer_id") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -68,7 +69,10 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { period } = parsed.data as { period: AnalyticsPeriod };
+    const { period, developer_id } = parsed.data as {
+      period: AnalyticsPeriod;
+      developer_id?: string;
+    };
     const db = getDb();
 
     const allWorkspaceIds = session.workspaces.map((w) => w.id);
@@ -82,23 +86,25 @@ export async function GET(request: NextRequest) {
         ? [requestedId]
         : allWorkspaceIds;
 
-    const isAdmin = requestedId
-      ? session.workspaces.find((w) => w.id === requestedId)?.role === "admin"
-      : false;
-
     const periodStart = getPeriodStart(period);
     const periodStartStr = periodStart.toISOString();
 
     const baseFilter = and(
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
-      sql`${schema.runs.owner_user_id} IS NOT NULL`
+      sql`${schema.runs.owner_user_id} IS NOT NULL`,
+      ...(developer_id
+        ? [sql`${schema.runs.developer_id} = ${developer_id}`]
+        : [])
     );
 
     const runsJoinFilter = and(
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
-      sql`${schema.runs.owner_user_id} IS NOT NULL`
+      sql`${schema.runs.owner_user_id} IS NOT NULL`,
+      ...(developer_id
+        ? [sql`${schema.runs.developer_id} = ${developer_id}`]
+        : [])
     );
 
     // Run all queries in parallel
@@ -114,7 +120,7 @@ export async function GET(request: NextRequest) {
       topRepoRows,
       activityRows,
       busiestHoursRows,
-      ...conditionalResults
+      developersRows
     ] = await Promise.all([
       // 1. Summary
       db
@@ -219,19 +225,22 @@ export async function GET(request: NextRequest) {
         )
         .groupBy(schema.events.run_id),
 
-      // 8. Recent runs for per-run breakdown chart
+      // 8. Recent runs for per-run breakdown
       db
         .select({
           run_id: schema.runs.id,
           label: sql<string>`coalesce(${schema.runs.title}, ${schema.runs.slug}, left(${schema.runs.id}::text, 8))`,
           started_at: schema.runs.started_at,
+          developer_id: schema.runs.developer_id,
+          developer_name: sql<string>`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`,
+          repo_key: schema.runs.repo_key,
         })
         .from(schema.runs)
         .where(baseFilter)
         .orderBy(sql`${schema.runs.started_at} DESC`)
-        .limit(20),
+        .limit(30),
 
-      // 8. Top repos
+      // 9. Top repos
       db
         .select({
           repo_key: schema.runs.repo_key,
@@ -265,18 +274,22 @@ export async function GET(request: NextRequest) {
         .groupBy(sql`extract(hour from ${schema.runs.started_at})`)
         .orderBy(sql`extract(hour from ${schema.runs.started_at})`),
 
-      // 11. Run-to-developer mapping (admin only)
-      ...(isAdmin
-        ? [
-            db
-              .select({
-                run_id: schema.runs.id,
-                developer_name: sql<string>`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`,
-              })
-              .from(schema.runs)
-              .where(baseFilter),
-          ]
-        : []),
+      // 11. Distinct developers for filter dropdown (unfiltered by developer_id)
+      db
+        .select({
+          developer_id: schema.runs.developer_id,
+          developer_name: sql<string>`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`,
+        })
+        .from(schema.runs)
+        .where(
+          and(
+            inArray(schema.runs.workspace_id, workspaceIds),
+            sql`${schema.runs.started_at} >= ${periodStartStr}`,
+            sql`${schema.runs.owner_user_id} IS NOT NULL`
+          )
+        )
+        .groupBy(schema.runs.developer_id, schema.runs.git_user_name)
+        .orderBy(sql`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`),
     ]);
 
     const summary = summaryRows[0];
@@ -359,12 +372,18 @@ export async function GET(request: NextRequest) {
           run_id: r.run_id,
           label: r.label,
           started_at: r.started_at,
+          developer_name: r.developer_name,
+          repo_key: r.repo_key,
           conversation_turns: turnsByRun.get(r.run_id) ?? 0,
           commits: commitsByRun.get(r.run_id) ?? 0,
           prs: prsByRun.get(r.run_id) ?? 0,
           compactions: compactionsByRun.get(r.run_id) ?? 0,
         }))
         .reverse(),
+      developers: developersRows.map((r) => ({
+        developer_id: r.developer_id,
+        developer_name: r.developer_name,
+      })),
       top_repos: topRepoRows.map((r) => ({
         repo_key: r.repo_key,
         run_count: Number(r.run_count),
@@ -381,13 +400,8 @@ export async function GET(request: NextRequest) {
       ),
     };
 
-    // Per-developer stats (admin only)
-    if (isAdmin && conditionalResults.length > 0) {
-      const runDeveloperRows = conditionalResults[0] as {
-        run_id: string;
-        developer_name: string;
-      }[];
-
+    // Per-developer stats (always available)
+    {
       const devMap = new Map<
         string,
         {
@@ -401,7 +415,7 @@ export async function GET(request: NextRequest) {
         }
       >();
 
-      for (const row of runDeveloperRows) {
+      for (const row of recentRunRows) {
         const entry = devMap.get(row.developer_name) ?? {
           runs: 0,
           turns: 0,
@@ -482,6 +496,7 @@ function emptyResponse(period: AnalyticsPeriod): AnalyticsResponse {
     },
     runs_per_day: [],
     run_breakdown: [],
+    developers: [],
     top_repos: [],
     activity_breakdown: [],
     busiest_hours: fillHourGaps([]),

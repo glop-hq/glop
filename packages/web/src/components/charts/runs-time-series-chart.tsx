@@ -8,7 +8,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 import type { RunsPerDay } from "@glop/shared";
 
@@ -50,19 +49,10 @@ export function RunsTimeSeriesChart({ data }: { data: RunsPerDay[] }) {
             });
           }}
         />
-        <Legend />
         <Bar
-          dataKey="completed"
-          stackId="runs"
+          dataKey="total"
           fill="var(--chart-2)"
-          name="Completed"
-          radius={[0, 0, 0, 0]}
-        />
-        <Bar
-          dataKey="failed"
-          stackId="runs"
-          fill="var(--chart-5)"
-          name="Failed"
+          name="Runs"
           radius={[4, 4, 0, 0]}
         />
       </BarChart>

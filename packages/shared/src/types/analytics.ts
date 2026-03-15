@@ -43,10 +43,17 @@ export interface RunBreakdown {
   run_id: string;
   label: string;
   started_at: string;
+  developer_name: string;
+  repo_key: string;
   conversation_turns: number;
   commits: number;
   prs: number;
   compactions: number;
+}
+
+export interface DeveloperOption {
+  developer_id: string;
+  developer_name: string;
 }
 
 export interface BusiestHour {
@@ -60,6 +67,7 @@ export interface AnalyticsResponse {
   runs_per_day: RunsPerDay[];
   run_breakdown: RunBreakdown[];
   developer_stats?: DeveloperStats[];
+  developers: DeveloperOption[];
   top_repos: TopRepo[];
   activity_breakdown: ActivityBreakdownItem[];
   busiest_hours: BusiestHour[];

@@ -5,7 +5,8 @@ import type { AnalyticsResponse, AnalyticsPeriod } from "@glop/shared";
 
 export function useAnalytics(
   workspaceId: string | undefined,
-  period: AnalyticsPeriod
+  period: AnalyticsPeriod,
+  developerId?: string
 ) {
   const [data, setData] = useState<AnalyticsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -14,9 +15,14 @@ export function useAnalytics(
   const fetchData = useCallback(async () => {
     if (!workspaceId) return;
     try {
-      const res = await fetch(
-        `/api/v1/analytics?workspace_id=${workspaceId}&period=${period}`
-      );
+      const params = new URLSearchParams({
+        workspace_id: workspaceId,
+        period,
+      });
+      if (developerId) {
+        params.set("developer_id", developerId);
+      }
+      const res = await fetch(`/api/v1/analytics?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
       setData(json);
@@ -26,7 +32,7 @@ export function useAnalytics(
     } finally {
       setLoading(false);
     }
-  }, [workspaceId, period]);
+  }, [workspaceId, period, developerId]);
 
   useEffect(() => {
     setLoading(true);
