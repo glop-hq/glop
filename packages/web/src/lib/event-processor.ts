@@ -41,6 +41,8 @@ function hookToEventType(classified: ClassifiedHook, isNewRun: boolean): EventTy
       return "run.response";
     case "permission_request":
       return "run.permission_request";
+    case "context_compacted":
+      return "run.context_compacted";
     case "session_end":
       return "run.completed";
     case "session_start":
@@ -274,6 +276,9 @@ export async function processHook(
         )
         .limit(1);
       if (existing.length === 0) {
+        const diffStats = rawPayload.commit_diff_stats as
+          | { files_changed: number; lines_added: number; lines_removed: number }
+          | undefined;
         await db.insert(schema.artifacts).values({
           id: generateId(),
           run_id: runId,
@@ -282,7 +287,13 @@ export async function processHook(
           label: commit.label,
           external_id: commit.external_id,
           state: null,
-          metadata: {},
+          metadata: diffStats
+            ? {
+                files_changed: diffStats.files_changed,
+                lines_added: diffStats.lines_added,
+                lines_removed: diffStats.lines_removed,
+              }
+            : {},
           created_at: now,
         });
       }

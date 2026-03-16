@@ -59,6 +59,16 @@
           }
         ]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "glop __hook"
+          }
+        ]
+      }
     ]
   }
 }

@@ -67,3 +67,29 @@ export function getGitUserEmail(): string | null {
     return null;
   }
 }
+
+export function getCommitDiffStats(): {
+  files_changed: number;
+  lines_added: number;
+  lines_removed: number;
+} | null {
+  try {
+    // git diff --shortstat HEAD~1 outputs like: " 3 files changed, 50 insertions(+), 10 deletions(-)"
+    const output = execSync("git diff --shortstat HEAD~1", {
+      encoding: "utf-8",
+      stdio: ["pipe", "pipe", "pipe"],
+      timeout: 3000,
+    }).trim();
+    if (!output) return null;
+    const files = output.match(/(\d+)\s+file/);
+    const insertions = output.match(/(\d+)\s+insertion/);
+    const deletions = output.match(/(\d+)\s+deletion/);
+    return {
+      files_changed: files ? parseInt(files[1], 10) : 0,
+      lines_added: insertions ? parseInt(insertions[1], 10) : 0,
+      lines_removed: deletions ? parseInt(deletions[1], 10) : 0,
+    };
+  } catch {
+    return null;
+  }
+}

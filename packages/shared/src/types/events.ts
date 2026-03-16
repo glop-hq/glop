@@ -10,6 +10,7 @@ export type EventType =
   | "run.permission_request"
   | "run.title_updated"
   | "run.summary_updated"
+  | "run.context_compacted"
   | "artifact.added"
   | "artifact.updated";
 
@@ -29,6 +30,7 @@ export interface Event {
 export type HookType =
   | "PostToolUse"
   | "PreToolUse"
+  | "PreCompact"
   | "PermissionRequest"
   | "Stop"
   | "UserPromptSubmit"

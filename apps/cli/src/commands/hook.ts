@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { openSync, readSync, closeSync, readFileSync } from "fs";
 import { loadConfig } from "../lib/config.js";
-import { getRepoKey, getBranch, getGitUserName, getGitUserEmail } from "../lib/git.js";
+import { getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 
 function extractSlugFromTranscript(transcriptPath: string): string | null {
   try {
@@ -45,6 +45,24 @@ export const hookCommand = new Command("__hook")
     payload.machine_id = config.machine_id;
     payload.git_user_name = getGitUserName();
     payload.git_user_email = getGitUserEmail();
+
+    // Enrich commits with diff stats
+    if (
+      payload.hook_event_name === "PostToolUse" &&
+      payload.tool_name === "Bash" &&
+      typeof payload.tool_response === "string" &&
+      /\bgit\s+commit\b/.test(
+        typeof (payload.tool_input as Record<string, unknown>)?.command === "string"
+          ? (payload.tool_input as Record<string, unknown>).command as string
+          : ""
+      ) &&
+      /\[\w[^\]]*\s+[a-f0-9]{7,}\]/.test(payload.tool_response)
+    ) {
+      const diffStats = getCommitDiffStats();
+      if (diffStats) {
+        payload.commit_diff_stats = diffStats;
+      }
+    }
 
     // Extract conversation slug from transcript file (skip high-frequency PostToolUse)
     const skipSlugEvents = new Set(["PostToolUse"]);
