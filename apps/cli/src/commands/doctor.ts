@@ -110,6 +110,17 @@ export const doctorCommand = new Command("doctor")
       fail("CLI in PATH", "hooks won't fire — ensure `glop` is in your PATH");
     }
 
+    // 7. GitHub CLI (gh) in PATH — needed for PR comment features
+    try {
+      const ghWhich = execSync("which gh", {
+        encoding: "utf-8",
+        stdio: ["pipe", "pipe", "pipe"],
+      }).trim();
+      check("pass", "GitHub CLI (gh)", ghWhich);
+    } catch {
+      check("warn", "GitHub CLI (gh)", "PR comment features won't work — install from https://cli.github.com");
+    }
+
     console.log();
     if (hasFailure) {
       process.exit(1);

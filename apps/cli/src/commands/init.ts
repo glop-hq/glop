@@ -50,6 +50,13 @@ export const initCommand = new Command("init")
       console.warn("Warning: `glop` not found in PATH. Hooks won't fire until it's accessible.");
     }
 
+    // Check for gh CLI — needed for PR comment features
+    try {
+      execSync("which gh", { stdio: ["pipe", "pipe", "pipe"] });
+    } catch {
+      console.warn("Warning: `gh` (GitHub CLI) not found. PR comment features won't work. Install from https://cli.github.com");
+    }
+
     const repoRoot = getRepoRoot();
     if (!repoRoot) {
       console.warn("Warning: not in a git repository. Repo and branch tracking will be limited.");

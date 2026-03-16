@@ -21,10 +21,13 @@ const protectedApiPaths = [
 
 // Matches /api/v1/runs/{uuid} but not deeper sub-routes like /api/v1/runs/{uuid}/share
 const API_RUN_DETAIL_RE = /^\/api\/v1\/runs\/[^/]+$/;
+// CLI-facing routes that use API key auth (not session cookies)
+const API_RUN_CLI_RE = /^\/api\/v1\/runs\/[^/]+\/context$/;
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;
   if (API_RUN_DETAIL_RE.test(pathname)) return true;
+  if (API_RUN_CLI_RE.test(pathname)) return true;
   return publicPaths.some(
     (p) => pathname === p || pathname.startsWith(p + "/")
   );
