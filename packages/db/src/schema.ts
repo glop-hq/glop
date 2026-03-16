@@ -383,6 +383,25 @@ export const access_requests = pgTable(
   ]
 );
 
+export const github_installations = pgTable("github_installations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  workspace_id: uuid("workspace_id")
+    .notNull()
+    .references(() => workspaces.id, { onDelete: "cascade" })
+    .unique(),
+  installation_id: integer("installation_id").notNull(),
+  github_account_login: text("github_account_login").notNull(),
+  github_account_type: text("github_account_type").notNull(),
+  installed_by: uuid("installed_by").references(() => users.id),
+  enabled: boolean("enabled").notNull().default(true),
+  created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),

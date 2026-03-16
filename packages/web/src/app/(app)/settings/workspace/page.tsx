@@ -8,7 +8,7 @@ import { useInviteLink } from "@/hooks/use-invite-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings, Github } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
@@ -45,6 +45,9 @@ export default function WorkspaceSettingsPage() {
       <MembersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} currentUserId={session?.user?.id} />
       {workspace.role === "admin" && (
         <InviteLinkSection workspaceId={workspace.id} />
+      )}
+      {workspace.role === "admin" && (
+        <GitHubSection workspaceId={workspace.id} />
       )}
     </main>
   );
@@ -419,6 +422,140 @@ function MembersSection({
         {inviteSuccess && (
           <p className="text-xs text-green-600">{inviteSuccess}</p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function GitHubSection({ workspaceId }: { workspaceId: string }) {
+  const [status, setStatus] = useState<{
+    configured: boolean;
+    connected: boolean;
+    installation: { github_account_login: string; github_account_type: string; created_at: string } | null;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchStatus = async () => {
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/github`);
+      if (res.ok) {
+        setStatus(await res.json());
+      }
+    } catch {
+      // Ignore
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchStatus();
+
+    // Clean up ?github= query param from callback redirect
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("github")) {
+      url.searchParams.delete("github");
+      window.history.replaceState({}, "", url.pathname + url.search);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [workspaceId]);
+
+  const handleDisconnect = async () => {
+    if (!confirm("Disconnect GitHub integration? Glop will stop posting comments on PRs.")) return;
+    setDisconnecting(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}/github`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      await fetchStatus();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to disconnect");
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Github className="h-4 w-4" />
+            GitHub Integration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Skeleton className="h-10 w-full" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!status?.configured) {
+    return null;
+  }
+
+  const appSlug = process.env.NEXT_PUBLIC_GITHUB_APP_SLUG;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Github className="h-4 w-4" />
+          GitHub Integration
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        {status.connected && status.installation ? (
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-green-500" />
+              <span className="text-sm">
+                Connected to <span className="font-medium">{status.installation.github_account_login}</span>
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="cursor-pointer text-xs text-destructive hover:text-destructive"
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+            >
+              {disconnecting ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : null}
+              Disconnect
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              Install the Glop GitHub App to automatically post session context as comments on pull requests created during Glop runs.
+            </p>
+            {appSlug ? (
+              <Button
+                size="sm"
+                className="cursor-pointer"
+                onClick={() => {
+                  window.location.href = `https://github.com/apps/${appSlug}/installations/new`;
+                }}
+              >
+                <Github className="h-4 w-4 mr-1" />
+                Install GitHub App
+              </Button>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                GitHub App is not fully configured. Contact your administrator.
+              </p>
+            )}
+          </div>
+        )}
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );

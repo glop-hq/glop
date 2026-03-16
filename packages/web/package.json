@@ -10,8 +10,10 @@
     "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@glop/db": "workspace:*",
     "@glop/shared": "workspace:*",
+    "@octokit/auth-app": "^8.2.0",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@sentry/nextjs": "^10.43.0",
     "@tailwindcss/typography": "^0.5.19",
@@ -21,6 +23,7 @@
     "lucide-react": "^0.468.0",
     "next": "^15.1.0",
     "next-auth": "5.0.0-beta.30",
+    "octokit": "^5.0.5",
     "pg": "^8.13.0",
     "posthog-js": "^1.360.1",
     "posthog-node": "^5.28.1",
