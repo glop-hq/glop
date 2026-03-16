@@ -27,8 +27,8 @@ interface ScatterPoint {
   z: number;
   label: string;
   developer: string;
+  commits: number;
   prs: number;
-  compactions: number;
 }
 
 export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
@@ -48,19 +48,19 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
       .filter((d) => d.developer_name === dev)
       .map((d) => ({
         x: d.conversation_turns,
-        y: d.commits,
-        z: Math.max(d.prs * 80 + 40, 40),
+        y: d.lines_changed,
+        z: Math.max(d.commits * 60 + 40, 40),
         label: d.label,
         developer: dev,
+        commits: d.commits,
         prs: d.prs,
-        compactions: d.compactions,
       }));
     return { name: dev, color: DEVELOPER_COLORS[idx % DEVELOPER_COLORS.length], points };
   });
 
   return (
     <ResponsiveContainer width="100%" height={350}>
-      <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 0 }}>
+      <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
         <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
         <XAxis
           type="number"
@@ -80,12 +80,12 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
         <YAxis
           type="number"
           dataKey="y"
-          name="Commits"
+          name="Lines Changed"
           allowDecimals={false}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
           label={{
-            value: "Commits",
+            value: "Lines Changed",
             angle: -90,
             position: "insideLeft",
             fontSize: 12,
@@ -109,9 +109,9 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
                 <p className="text-muted-foreground">{p.developer}</p>
                 <div className="mt-1 space-y-0.5">
                   <p>Turns: {p.x}</p>
-                  <p>Commits: {p.y}</p>
+                  <p>Lines changed: {p.y.toLocaleString()}</p>
+                  <p>Commits: {p.commits}</p>
                   <p>PRs: {p.prs}</p>
-                  <p>Compactions: {p.compactions}</p>
                 </div>
               </div>
             );

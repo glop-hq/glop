@@ -47,6 +47,7 @@ export interface RunBreakdown {
   repo_key: string;
   conversation_turns: number;
   commits: number;
+  lines_changed: number;
   prs: number;
   compactions: number;
 }

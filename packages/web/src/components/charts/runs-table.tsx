@@ -9,6 +9,7 @@ type SortKey =
   | "started_at"
   | "conversation_turns"
   | "commits"
+  | "lines_changed"
   | "prs"
   | "compactions";
 
@@ -42,6 +43,7 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
     () => ({
       conversation_turns: Math.max(...data.map((d) => d.conversation_turns), 1),
       commits: Math.max(...data.map((d) => d.commits), 1),
+      lines_changed: Math.max(...data.map((d) => d.lines_changed), 1),
       prs: Math.max(...data.map((d) => d.prs), 1),
       compactions: Math.max(...data.map((d) => d.compactions), 1),
     }),
@@ -83,6 +85,7 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
     { key: "started_at", label: "Date" },
     { key: "conversation_turns", label: "Turns" },
     { key: "commits", label: "Commits" },
+    { key: "lines_changed", label: "Lines" },
     { key: "prs", label: "PRs" },
     { key: "compactions", label: "Compactions" },
   ];
@@ -146,6 +149,9 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
                 </td>
                 <td className="w-28 py-2 pr-2">
                   <InlineBar value={run.commits} max={maxes.commits} />
+                </td>
+                <td className="w-28 py-2 pr-2">
+                  <InlineBar value={run.lines_changed} max={maxes.lines_changed} />
                 </td>
                 <td className="w-28 py-2 pr-2">
                   <InlineBar value={run.prs} max={maxes.prs} />

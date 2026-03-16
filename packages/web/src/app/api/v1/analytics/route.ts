@@ -113,6 +113,7 @@ export async function GET(request: NextRequest) {
       runsPerDayRows,
       turnsPerRunRows,
       artifactRows,
+      linesChangedRows,
       firstCommitRows,
       eventTimestampRows,
       compactionsPerRunRows,
@@ -176,6 +177,26 @@ export async function GET(request: NextRequest) {
           )
         )
         .groupBy(schema.artifacts.run_id, schema.artifacts.artifact_type),
+
+      // 4b. Lines changed per run (from commit artifact metadata)
+      db
+        .select({
+          run_id: schema.artifacts.run_id,
+          lines_changed: sql<number>`coalesce(sum(
+            (${schema.artifacts.metadata}->>'lines_added')::int +
+            (${schema.artifacts.metadata}->>'lines_removed')::int
+          ), 0)`,
+        })
+        .from(schema.artifacts)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.artifacts.run_id}`)
+        .where(
+          and(
+            runsJoinFilter,
+            sql`${schema.artifacts.artifact_type} = 'commit'`,
+            sql`${schema.artifacts.metadata}->>'lines_added' IS NOT NULL`
+          )
+        )
+        .groupBy(schema.artifacts.run_id),
 
       // 5. First commit timestamp per run
       db
@@ -314,6 +335,10 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    const linesChangedByRun = new Map(
+      linesChangedRows.map((r) => [r.run_id, Number(r.lines_changed)])
+    );
+
     const compactionsByRun = new Map(
       compactionsPerRunRows.map((r) => [r.run_id, Number(r.compaction_count)])
     );
@@ -376,6 +401,7 @@ export async function GET(request: NextRequest) {
           repo_key: r.repo_key,
           conversation_turns: turnsByRun.get(r.run_id) ?? 0,
           commits: commitsByRun.get(r.run_id) ?? 0,
+          lines_changed: linesChangedByRun.get(r.run_id) ?? 0,
           prs: prsByRun.get(r.run_id) ?? 0,
           compactions: compactionsByRun.get(r.run_id) ?? 0,
         }))
