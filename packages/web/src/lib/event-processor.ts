@@ -9,7 +9,6 @@ import {
 } from "@glop/shared";
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
 import { extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
-import { postOrUpdatePrComment, updatePrCommentsForRun } from "./pr-commenter";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -314,9 +313,8 @@ export async function processHook(
         )
         .limit(1);
       if (existing.length === 0) {
-        const prArtifactId = generateId();
         await db.insert(schema.artifacts).values({
-          id: prArtifactId,
+          id: generateId(),
           run_id: runId,
           artifact_type: "pr",
           url: pr.url,
@@ -326,20 +324,8 @@ export async function processHook(
           metadata: {},
           created_at: now,
         });
-
-        // Fire-and-forget: post PR context comment
-        postOrUpdatePrComment(db, runId, prArtifactId, pr.url, pr.external_id).catch((err) =>
-          console.error("PR comment failed:", err)
-        );
       }
     }
-  }
-
-  // Fire-and-forget: update PR comments when run completes
-  if (classified.is_completion && runId) {
-    updatePrCommentsForRun(db, runId).catch((err) =>
-      console.error("PR comment update on completion failed:", err)
-    );
   }
 
   return { run_id: runId, event_id: eventId };

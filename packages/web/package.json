@@ -10,7 +10,6 @@
     "seed": "tsx src/scripts/seed.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.78.0",
     "@glop/db": "workspace:*",
     "@glop/shared": "workspace:*",
     "@octokit/auth-app": "^8.2.0",
