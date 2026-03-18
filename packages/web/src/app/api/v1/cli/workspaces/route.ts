@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
   if (workspaceIds.length === 0) {
     return NextResponse.json({
-      current_workspace_id: auth.workspace_id,
+      current_workspace_id: null,
       workspaces: [],
     });
   }
@@ -57,8 +57,10 @@ export async function GET(request: NextRequest) {
     .from(schema.workspaces)
     .where(inArray(schema.workspaces.id, workspaceIds));
 
+  const currentWorkspaceId = workspaceIds[0] || null;
+
   return NextResponse.json({
-    current_workspace_id: auth.workspace_id,
+    current_workspace_id: currentWorkspaceId,
     workspaces,
   });
 }

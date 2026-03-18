@@ -179,14 +179,14 @@ export default function LandingPage() {
                 <div>
                   <div className="text-zinc-500">{"# 1. Authenticate"}</div>
                   <div className="flex items-center gap-1 text-zinc-300">
-                    <span className="text-green-400">$</span> glop auth
+                    <span className="text-green-400">$</span> glop login
                   </div>
                   <div className="mt-0.5 text-xs text-zinc-600">Opened browser for sign in...</div>
                 </div>
                 <div>
                   <div className="text-zinc-500">{"# 2. Initialize your repo"}</div>
                   <div className="flex items-center gap-1 text-zinc-300">
-                    <span className="text-green-400">$</span> glop init
+                    <span className="text-green-400">$</span> glop link
                   </div>
                   <div className="mt-0.5 text-xs text-zinc-600">Hooks installed in .claude/settings.json</div>
                 </div>

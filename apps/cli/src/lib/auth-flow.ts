@@ -5,9 +5,6 @@ export interface CallbackResult {
   api_key: string;
   developer_id: string;
   developer_name: string;
-  workspace_id?: string;
-  workspace_name?: string;
-  workspace_slug?: string;
 }
 
 export function openBrowser(url: string) {
@@ -70,9 +67,6 @@ export function waitForCallback(port: number): Promise<CallbackResult> {
             api_key: apiKey,
             developer_id: developerId,
             developer_name: developerName,
-            workspace_id: url.searchParams.get("workspace_id") || undefined,
-            workspace_name: url.searchParams.get("workspace_name") || undefined,
-            workspace_slug: url.searchParams.get("workspace_slug") || undefined,
           });
           return;
         }

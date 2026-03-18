@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDb } from "@/lib/db";
+import { eq, and } from "drizzle-orm";
+import { getDb, schema } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 import { processHook, type HookContext } from "@/lib/event-processor";
 
@@ -49,6 +50,35 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const workspaceId =
+      typeof body.workspace_id === "string" ? body.workspace_id : null;
+
+    if (!workspaceId) {
+      return NextResponse.json(
+        { error: "No workspace_id provided. Run `glop link` to bind this repo to a workspace.", code: "BAD_REQUEST" },
+        { status: 400 }
+      );
+    }
+
+    // Verify user is a member of the workspace
+    const membership = await db
+      .select({ id: schema.workspace_members.id })
+      .from(schema.workspace_members)
+      .where(
+        and(
+          eq(schema.workspace_members.user_id, auth.user_id!),
+          eq(schema.workspace_members.workspace_id, workspaceId)
+        )
+      )
+      .limit(1);
+
+    if (membership.length === 0) {
+      return NextResponse.json(
+        { error: "Not a member of this workspace", code: "FORBIDDEN" },
+        { status: 403 }
+      );
+    }
+
     // Determine hook type from payload
     // Claude Code sends hook_event_name, or hook_type, or we infer from context
     const hookType =
@@ -75,7 +105,7 @@ export async function POST(request: NextRequest) {
       slug: typeof body.slug === "string" ? body.slug : undefined,
       git_user_name: typeof body.git_user_name === "string" ? body.git_user_name : null,
       git_user_email: typeof body.git_user_email === "string" ? body.git_user_email : null,
-      workspace_id: auth.workspace_id,
+      workspace_id: workspaceId,
       user_id: auth.user_id,
     };
 

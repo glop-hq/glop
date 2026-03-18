@@ -46,16 +46,9 @@ describe("config", () => {
       const config = {
         server_url: "http://localhost:3000",
         machine_id: "machine-1",
+        api_key: "glop_test",
+        developer_id: "dev-1",
         developer_name: "Test",
-        default_workspace: "ws-1",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_test",
-            developer_id: "dev-1",
-            workspace_name: "Acme",
-            workspace_slug: "acme-123",
-          },
-        },
       };
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(config));
@@ -75,13 +68,9 @@ describe("config", () => {
       const config = {
         server_url: "http://localhost:3000",
         machine_id: "machine-1",
+        api_key: "glop_test",
+        developer_id: "dev-1",
         developer_name: "Test",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_test",
-            developer_id: "dev-1",
-          },
-        },
       };
       saveGlobalConfig(config);
       expect(fs.mkdirSync).toHaveBeenCalledWith(configDir, {
@@ -144,40 +133,25 @@ describe("config", () => {
       expect(loadConfig()).toBeNull();
     });
 
-    it("returns null when global config has no workspaces", () => {
+    it("returns null when global config has no api_key", () => {
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(
         JSON.stringify({
           server_url: "http://localhost:3000",
           machine_id: "machine-1",
           developer_name: "Test",
-          workspaces: {},
         })
       );
       expect(loadConfig()).toBeNull();
     });
 
-    it("resolves flat config from default workspace", () => {
-      vi.mocked(getRepoRoot).mockReturnValue(null);
+    it("returns flat config from global config", () => {
       const globalConfig = {
         server_url: "http://localhost:3000",
         machine_id: "machine-1",
+        api_key: "glop_abc",
+        developer_id: "dev-1",
         developer_name: "Test",
-        default_workspace: "ws-1",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_abc",
-            developer_id: "dev-1",
-            workspace_name: "Acme",
-            workspace_slug: "acme-123",
-          },
-          "ws-2": {
-            api_key: "glop_xyz",
-            developer_id: "dev-2",
-            workspace_name: "Side",
-            workspace_slug: "side-456",
-          },
-        },
       };
       vi.mocked(fs.existsSync).mockReturnValue(true);
       vi.mocked(fs.readFileSync).mockReturnValue(
@@ -190,100 +164,7 @@ describe("config", () => {
         developer_id: "dev-1",
         developer_name: "Test",
         machine_id: "machine-1",
-        workspace_id: "ws-1",
-        workspace_name: "Acme",
-        workspace_slug: "acme-123",
       });
-    });
-
-    it("resolves workspace from per-repo binding over default", () => {
-      vi.mocked(getRepoRoot).mockReturnValue("/fake/repo");
-      const globalConfig = {
-        server_url: "http://localhost:3000",
-        machine_id: "machine-1",
-        developer_name: "Test",
-        default_workspace: "ws-1",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_abc",
-            developer_id: "dev-1",
-            workspace_name: "Acme",
-            workspace_slug: "acme-123",
-          },
-          "ws-2": {
-            api_key: "glop_xyz",
-            developer_id: "dev-2",
-            workspace_name: "Side",
-            workspace_slug: "side-456",
-          },
-        },
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockImplementation((p) => {
-        if (String(p).includes("/fake/repo/.glop/config.json")) {
-          return JSON.stringify({ workspace_id: "ws-2" });
-        }
-        return JSON.stringify(globalConfig);
-      });
-
-      expect(loadConfig()).toEqual({
-        server_url: "http://localhost:3000",
-        api_key: "glop_xyz",
-        developer_id: "dev-2",
-        developer_name: "Test",
-        machine_id: "machine-1",
-        workspace_id: "ws-2",
-        workspace_name: "Side",
-        workspace_slug: "side-456",
-      });
-    });
-
-    it("falls back to first workspace when no default or binding", () => {
-      vi.mocked(getRepoRoot).mockReturnValue(null);
-      const globalConfig = {
-        server_url: "http://localhost:3000",
-        machine_id: "machine-1",
-        developer_name: "Test",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_abc",
-            developer_id: "dev-1",
-            workspace_name: "Acme",
-            workspace_slug: "acme-123",
-          },
-        },
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(
-        JSON.stringify(globalConfig)
-      );
-
-      const result = loadConfig();
-      expect(result).not.toBeNull();
-      expect(result!.workspace_id).toBe("ws-1");
-      expect(result!.api_key).toBe("glop_abc");
-    });
-
-    it("returns null when resolved workspace is missing from workspaces map", () => {
-      vi.mocked(getRepoRoot).mockReturnValue(null);
-      const globalConfig = {
-        server_url: "http://localhost:3000",
-        machine_id: "machine-1",
-        developer_name: "Test",
-        default_workspace: "ws-gone",
-        workspaces: {
-          "ws-1": {
-            api_key: "glop_abc",
-            developer_id: "dev-1",
-          },
-        },
-      };
-      vi.mocked(fs.existsSync).mockReturnValue(true);
-      vi.mocked(fs.readFileSync).mockReturnValue(
-        JSON.stringify(globalConfig)
-      );
-
-      expect(loadConfig()).toBeNull();
     });
   });
 
@@ -325,14 +206,9 @@ describe("config", () => {
         JSON.stringify({
           server_url: "http://saved:4000",
           machine_id: "m-1",
+          api_key: "glop_test",
+          developer_id: "dev-1",
           developer_name: "Test",
-          default_workspace: "ws-1",
-          workspaces: {
-            "ws-1": {
-              api_key: "glop_test",
-              developer_id: "dev-1",
-            },
-          },
         })
       );
       expect(getServerUrl()).toBe("http://saved:4000");

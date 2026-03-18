@@ -3,7 +3,7 @@ import { openSync, readSync, closeSync, readFileSync } from "fs";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
-import { loadConfig } from "../lib/config.js";
+import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 
 const PR_URL_RE = /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/;
@@ -32,6 +32,10 @@ export const hookCommand = new Command("__hook")
     const config = loadConfig();
     if (!config) return;
 
+    // Require repo binding — exit silently if repo not initialized
+    const repoConfig = loadRepoConfig();
+    if (!repoConfig) return;
+
     let input = "";
     for await (const chunk of process.stdin) {
       input += chunk;
@@ -44,10 +48,11 @@ export const hookCommand = new Command("__hook")
       return;
     }
 
-    // Enrich with git info
+    // Enrich with git info and workspace binding
     payload.repo_key = getRepoKey() || payload.cwd || "unknown";
     payload.branch = getBranch();
     payload.machine_id = config.machine_id;
+    payload.workspace_id = repoConfig.workspace_id;
     payload.git_user_name = getGitUserName();
     payload.git_user_email = getGitUserEmail();
 
@@ -119,7 +124,7 @@ export const hookCommand = new Command("__hook")
             console.log(`glop: Add "Glop-Run: ${runUrl}" as a git trailer in all commit messages and PR descriptions.`);
           }
         } else if (res.status === 401) {
-          console.log("glop: API key expired or invalid — run `glop auth` to re-authenticate");
+          console.log("glop: API key expired or invalid — run `glop login` to re-authenticate");
         } else {
           console.log(`glop: server returned HTTP ${res.status}`);
         }
