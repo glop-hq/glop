@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const publicPaths = [
   "/login",
   "/api/v1/auth",
+  "/api/v1/cli",
   "/api/v1/ingest",
   "/api/v1/health",
   "/api/v1/shared",
