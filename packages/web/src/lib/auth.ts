@@ -50,7 +50,6 @@ export async function registerDeveloper(
     key_hash: hash,
     developer_id: developerId,
     developer_name: developerName,
-    workspace_id: null,
     user_id: userId || null,
     created_at: new Date().toISOString(),
   });

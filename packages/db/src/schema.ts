@@ -388,7 +388,6 @@ export const api_keys = pgTable("api_keys", {
   key_hash: text("key_hash").notNull().unique(),
   developer_id: text("developer_id").notNull(),
   developer_name: text("developer_name").notNull(),
-  workspace_id: uuid("workspace_id").references(() => workspaces.id),
   user_id: uuid("user_id").references(() => users.id),
   created_at: timestamp("created_at", {
     mode: "string",
