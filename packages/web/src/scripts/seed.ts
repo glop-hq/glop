@@ -50,7 +50,7 @@ async function seed() {
       key_hash: hashKey(apiKey),
       developer_id: dev.id,
       developer_name: dev.name,
-      workspace_id: workspaceId,
+      workspace_id: null,
       created_at: new Date().toISOString(),
     });
   }

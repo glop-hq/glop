@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 
     const db = getDb();
 
-    // Check for browser session to link API key to workspace
+    // Check for browser session to link API key to user
     const session = await getSessionUser();
     if (!session) {
       return NextResponse.json(
@@ -27,22 +27,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const requestedWorkspaceId = body.workspace_id as string | undefined;
-    const workspaceId =
-      (requestedWorkspaceId && session.workspaces.some((w: { id: string }) => w.id === requestedWorkspaceId)
-        ? requestedWorkspaceId
-        : null) || session.workspaces[0]?.id;
-    if (!workspaceId) {
-      return NextResponse.json(
-        { error: "No workspace found", code: "NO_WORKSPACE" },
-        { status: 400 }
-      );
-    }
-
     const result = await registerDeveloper(
       db,
       parsed.data.developer_name,
-      workspaceId,
       session.user_id
     );
 

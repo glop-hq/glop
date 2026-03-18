@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 
@@ -35,7 +35,33 @@ export async function GET(
       .where(eq(schema.runs.id, runId))
       .limit(1);
 
-    if (!run || run.workspace_id !== auth.workspace_id) {
+    if (!run) {
+      return NextResponse.json(
+        { error: "Run not found", code: "NOT_FOUND" },
+        { status: 404 }
+      );
+    }
+
+    // Verify user is a member of the run's workspace
+    if (auth.user_id && run.workspace_id) {
+      const membership = await db
+        .select({ id: schema.workspace_members.id })
+        .from(schema.workspace_members)
+        .where(
+          and(
+            eq(schema.workspace_members.user_id, auth.user_id),
+            eq(schema.workspace_members.workspace_id, run.workspace_id)
+          )
+        )
+        .limit(1);
+
+      if (membership.length === 0) {
+        return NextResponse.json(
+          { error: "Run not found", code: "NOT_FOUND" },
+          { status: 404 }
+        );
+      }
+    } else {
       return NextResponse.json(
         { error: "Run not found", code: "NOT_FOUND" },
         { status: 404 }

@@ -1,9 +1,10 @@
 import { Command } from "commander";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
-import { getRepoRoot, getRepoKey, getBranch } from "../lib/git.js";
+import { getRepoRoot, getRepoKey } from "../lib/git.js";
 import { execSync } from "child_process";
 import fs from "fs";
 import path from "path";
+import os from "os";
 
 type Status = "pass" | "fail" | "warn";
 
@@ -23,20 +24,14 @@ export const doctorCommand = new Command("doctor")
       return check("fail", label, detail);
     };
 
-    // 1. Config exists
+    // 1. Authenticated?
     const config = loadConfig();
     if (!config) {
-      fail("Authenticated", "run `glop auth` first");
-      // Can't check anything else without config
+      fail("Authenticated", "run `glop login` first");
       console.log();
       process.exit(1);
     }
-    const repoBinding = loadRepoConfig();
-    const wsSource = repoBinding?.workspace_id ? "repo binding" : "default";
-    const authDetail = config.workspace_name
-      ? `${config.developer_name} on ${config.server_url} (${config.workspace_name}, ${wsSource})`
-      : `${config.developer_name} on ${config.server_url}`;
-    check("pass", "Authenticated", authDetail);
+    check("pass", "Authenticated", `${config.developer_name} on ${config.server_url}`);
 
     // 2. Server reachable + API key valid
     try {
@@ -50,7 +45,7 @@ export const doctorCommand = new Command("doctor")
       if (res.ok) {
         check("pass", "Server reachable");
       } else if (res.status === 401) {
-        fail("API key valid", "re-run `glop auth`");
+        fail("API key valid", "re-run `glop login`");
       } else {
         fail("Server reachable", `HTTP ${res.status}`);
       }
@@ -76,30 +71,39 @@ export const doctorCommand = new Command("doctor")
       }
     }
 
-    // 5. Hooks installed in current repo
-    const baseDir = repoRoot || process.cwd();
-    const settingsFile = path.join(baseDir, ".claude", "settings.json");
+    // 5. Global hooks installed?
+    const globalSettingsFile = path.join(os.homedir(), ".claude", "settings.json");
 
-    if (fs.existsSync(settingsFile)) {
+    if (fs.existsSync(globalSettingsFile)) {
       try {
-        const settings = JSON.parse(fs.readFileSync(settingsFile, "utf-8"));
+        const settings = JSON.parse(fs.readFileSync(globalSettingsFile, "utf-8"));
         const hooks = settings.hooks || {};
         const glopEvents = Object.entries(hooks).filter(([, handlers]) =>
           JSON.stringify(handlers).includes("glop __hook")
         );
         if (glopEvents.length > 0) {
-          check("pass", "Hooks installed", `${glopEvents.length} events in ${settingsFile}`);
+          check("pass", "Global hooks installed", `${glopEvents.length} events in ${globalSettingsFile}`);
         } else {
-          fail("Hooks installed", "run `glop init`");
+          fail("Global hooks installed", "run `glop login`");
         }
       } catch {
-        fail("Hooks installed", `${settingsFile} is corrupted`);
+        fail("Global hooks installed", `${globalSettingsFile} is corrupted`);
       }
     } else {
-      fail("Hooks installed", "run `glop init`");
+      fail("Global hooks installed", "run `glop login`");
     }
 
-    // 6. glop CLI in PATH
+    // 6. Repo bound to workspace?
+    const repoBinding = loadRepoConfig();
+    if (repoBinding) {
+      check("pass", "Repo bound to workspace", repoBinding.workspace_id);
+    } else if (repoRoot) {
+      check("warn", "Repo bound to workspace", "run `glop link` to bind this repo");
+    } else {
+      check("warn", "Repo bound to workspace", "not in a git repo");
+    }
+
+    // 7. glop CLI in PATH
     try {
       const which = execSync("which glop", {
         encoding: "utf-8",
@@ -110,7 +114,7 @@ export const doctorCommand = new Command("doctor")
       fail("CLI in PATH", "hooks won't fire — ensure `glop` is in your PATH");
     }
 
-    // 7. GitHub CLI (gh) in PATH — needed for PR comment features
+    // 8. GitHub CLI (gh) in PATH
     try {
       const ghWhich = execSync("which gh", {
         encoding: "utf-8",

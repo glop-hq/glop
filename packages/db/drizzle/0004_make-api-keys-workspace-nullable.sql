@@ -1,0 +1,1 @@
+ALTER TABLE "api_keys" ALTER COLUMN "workspace_id" DROP NOT NULL;

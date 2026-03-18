@@ -1,13 +1,12 @@
 #!/usr/bin/env node
 
 import { Command } from "commander";
-import { authCommand } from "./commands/auth.js";
-import { deactivateCommand } from "./commands/deactivate.js";
+import { loginCommand } from "./commands/login.js";
+import { unlinkCommand } from "./commands/unlink.js";
 import { doctorCommand } from "./commands/doctor.js";
 import { hookCommand } from "./commands/hook.js";
-import { initCommand } from "./commands/init.js";
+import { linkCommand } from "./commands/link.js";
 import { updateCommand } from "./commands/update.js";
-import { workspaceCommand } from "./commands/workspace.js";
 import { checkForUpdate } from "./lib/update-check.js";
 import pkg from "../package.json";
 
@@ -16,13 +15,12 @@ const program = new Command()
   .description("Passive control plane for local Claude-driven development")
   .version(pkg.version);
 
-program.addCommand(authCommand);
-program.addCommand(deactivateCommand);
+program.addCommand(loginCommand);
+program.addCommand(unlinkCommand);
 program.addCommand(doctorCommand);
 program.addCommand(hookCommand, { hidden: true });
-program.addCommand(initCommand);
+program.addCommand(linkCommand);
 program.addCommand(updateCommand);
-program.addCommand(workspaceCommand);
 program.hook("postAction", async (_thisCommand, actionCommand) => {
   if (actionCommand.name() === "__hook") return;
   await checkForUpdate(pkg.version);

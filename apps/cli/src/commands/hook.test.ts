@@ -9,6 +9,7 @@ vi.mock("fs", () => ({
 }));
 vi.mock("../lib/config.js", () => ({
   loadConfig: vi.fn(),
+  loadRepoConfig: vi.fn(),
 }));
 vi.mock("../lib/git.js", () => ({
   getRepoKey: vi.fn(),
@@ -18,7 +19,7 @@ vi.mock("../lib/git.js", () => ({
 }));
 
 const { openSync, readSync, closeSync, readFileSync } = await import("fs");
-const { loadConfig } = await import("../lib/config.js");
+const { loadConfig, loadRepoConfig } = await import("../lib/config.js");
 const { getRepoKey, getBranch, getGitUserName, getGitUserEmail } = await import("../lib/git.js");
 const { hookCommand } = await import("./hook.js");
 
@@ -81,7 +82,7 @@ describe("__hook command", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("sends enriched payload to server", async () => {
+  it("exits silently when no repo config (repo not initialized)", async () => {
     vi.mocked(loadConfig).mockReturnValue({
       server_url: "http://localhost:3000",
       api_key: "glop_test",
@@ -89,6 +90,25 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue(null);
+
+    await withMockStdin(
+      JSON.stringify({ hook_event_name: "PostToolUse" }),
+      () => hookCommand.parseAsync([], { from: "user" })
+    );
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("sends enriched payload with workspace_id to server", async () => {
+    vi.mocked(loadConfig).mockReturnValue({
+      server_url: "http://localhost:3000",
+      api_key: "glop_test",
+      developer_id: "dev-1",
+      developer_name: "Test",
+      machine_id: "machine-1",
+    });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("feat/cool");
 
@@ -106,6 +126,7 @@ describe("__hook command", () => {
     expect(body.repo_key).toBe("acme/app");
     expect(body.branch).toBe("feat/cool");
     expect(body.machine_id).toBe("machine-1");
+    expect(body.workspace_id).toBe("ws-test");
     expect(body.tool_name).toBe("Edit");
   });
 
@@ -117,6 +138,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     fetchSpy.mockResolvedValue({
@@ -146,6 +168,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     fetchSpy.mockResolvedValue({ ok: false, status: 401 });
@@ -156,7 +179,7 @@ describe("__hook command", () => {
     );
 
     expect(console.log).toHaveBeenCalledWith(
-      "glop: API key expired or invalid — run `glop auth` to re-authenticate"
+      "glop: API key expired or invalid — run `glop login` to re-authenticate"
     );
   });
 
@@ -168,6 +191,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     fetchSpy.mockRejectedValue(new Error("ECONNREFUSED"));
@@ -190,6 +214,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     fetchSpy.mockRejectedValue(new Error("ECONNREFUSED"));
@@ -210,6 +235,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue(null);
     vi.mocked(getBranch).mockReturnValue("main");
 
@@ -233,6 +259,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     mockTranscriptRead('{"type":"init","slug":"woolly-scribbling-kay"}\n{"type":"message"}\n');
@@ -258,6 +285,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     // Slug appears after large CLAUDE.md content, beyond the 256KB buffer
@@ -285,6 +313,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     vi.mocked(openSync).mockImplementation(() => {
@@ -311,6 +340,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
     mockTranscriptRead('{"type":"init"}\n{"type":"message"}\n');
@@ -335,6 +365,7 @@ describe("__hook command", () => {
       developer_name: "Test",
       machine_id: "machine-1",
     });
+    vi.mocked(loadRepoConfig).mockReturnValue({ workspace_id: "ws-test" });
     vi.mocked(getRepoKey).mockReturnValue("acme/app");
     vi.mocked(getBranch).mockReturnValue("main");
 

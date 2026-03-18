@@ -2,28 +2,16 @@
 
 import { useSession } from "next-auth/react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useState, useEffect, Suspense } from "react";
-import { useWorkspaces } from "@/hooks/use-workspaces";
+import { useState, Suspense } from "react";
 
 function CliAuthContent() {
   const { data: session, status } = useSession();
-  const { workspaces, currentWorkspace } = useWorkspaces();
   const searchParams = useSearchParams();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string>("");
 
   const port = searchParams.get("port");
-  const preselectedWorkspaceId = searchParams.get("workspace_id");
-
-  useEffect(() => {
-    if (preselectedWorkspaceId && !selectedWorkspaceId && workspaces.some((w) => w.id === preselectedWorkspaceId)) {
-      setSelectedWorkspaceId(preselectedWorkspaceId);
-    } else if (currentWorkspace && !selectedWorkspaceId) {
-      setSelectedWorkspaceId(currentWorkspace.id);
-    }
-  }, [currentWorkspace, selectedWorkspaceId, preselectedWorkspaceId, workspaces]);
 
   if (!port) {
     return (
@@ -31,7 +19,7 @@ function CliAuthContent() {
         <div className="w-full max-w-sm rounded-lg border bg-card p-8 shadow-sm text-center">
           <h1 className="text-xl font-bold">Invalid Request</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Missing callback port. Please run <code className="bg-secondary px-1 rounded">glop auth</code> from your terminal.
+            Missing callback port. Please run <code className="bg-secondary px-1 rounded">glop login</code> from your terminal.
           </p>
         </div>
       </div>
@@ -62,7 +50,6 @@ function CliAuthContent() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           callback_port: Number(port),
-          workspace_id: selectedWorkspaceId,
         }),
       });
 
@@ -111,30 +98,6 @@ function CliAuthContent() {
           </div>
         </div>
 
-        {workspaces.length > 1 && (
-          <div className="mb-4">
-            <label
-              htmlFor="workspace-select"
-              className="mb-1.5 block text-sm font-medium"
-            >
-              Workspace
-            </label>
-            <select
-              id="workspace-select"
-              value={selectedWorkspaceId}
-              onChange={(e) => setSelectedWorkspaceId(e.target.value)}
-              className="w-full cursor-pointer rounded-md border bg-background px-3 py-2 text-sm"
-            >
-              <option value="">Select a workspace</option>
-              {workspaces.map((w) => (
-                <option key={w.id} value={w.id}>
-                  {w.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
         {error && (
           <div className="mb-4 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
             {error}
@@ -144,7 +107,7 @@ function CliAuthContent() {
         <div className="flex flex-col gap-2">
           <button
             onClick={handleAuthorize}
-            disabled={loading || !selectedWorkspaceId}
+            disabled={loading}
             className="w-full cursor-pointer rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Authorizing..." : "Authorize"}
