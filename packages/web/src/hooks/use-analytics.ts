@@ -20,7 +20,7 @@ export function useAnalytics(
         period,
       });
       if (developerId) {
-        params.set("developer_id", developerId);
+        params.set("user_id", developerId);
       }
       const res = await fetch(`/api/v1/analytics?${params}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

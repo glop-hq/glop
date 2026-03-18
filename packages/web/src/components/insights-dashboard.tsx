@@ -83,7 +83,7 @@ function DeveloperSelect({
   value,
   onChange,
 }: {
-  developers: { developer_id: string; developer_name: string }[];
+  developers: { user_id: string; developer_name: string }[];
   value: string | undefined;
   onChange: (id: string | undefined) => void;
 }) {
@@ -100,7 +100,7 @@ function DeveloperSelect({
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  const selected = developers.find((d) => d.developer_id === value);
+  const selected = developers.find((d) => d.user_id === value);
 
   return (
     <div className="relative" ref={ref}>
@@ -132,14 +132,14 @@ function DeveloperSelect({
           </button>
           {developers.map((dev) => (
             <button
-              key={dev.developer_id}
+              key={dev.user_id}
               onClick={() => {
-                onChange(dev.developer_id);
+                onChange(dev.user_id);
                 setOpen(false);
               }}
               className={cn(
                 "w-full cursor-pointer rounded-md px-3 py-1.5 text-left text-sm transition-colors hover:bg-muted",
-                value === dev.developer_id && "bg-muted font-medium"
+                value === dev.user_id && "bg-muted font-medium"
               )}
             >
               {dev.developer_name}

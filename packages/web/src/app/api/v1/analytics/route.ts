@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sql, inArray, and } from "drizzle-orm";
+import { sql, inArray, and, eq } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { analyticsQuerySchema } from "@glop/shared";
 import { requireSession, AuthError } from "@/lib/session";
@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
 
     const parsed = analyticsQuerySchema.safeParse({
       period: searchParams.get("period") ?? undefined,
-      developer_id: searchParams.get("developer_id") ?? undefined,
+      user_id: searchParams.get("user_id") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -69,9 +69,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const { period, developer_id } = parsed.data as {
+    const { period, user_id } = parsed.data as {
       period: AnalyticsPeriod;
-      developer_id?: string;
+      user_id?: string;
     };
     const db = getDb();
 
@@ -93,8 +93,8 @@ export async function GET(request: NextRequest) {
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
       sql`${schema.runs.owner_user_id} IS NOT NULL`,
-      ...(developer_id
-        ? [sql`${schema.runs.developer_id} = ${developer_id}`]
+      ...(user_id
+        ? [sql`${schema.runs.owner_user_id} = ${user_id}`]
         : [])
     );
 
@@ -102,8 +102,8 @@ export async function GET(request: NextRequest) {
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
       sql`${schema.runs.owner_user_id} IS NOT NULL`,
-      ...(developer_id
-        ? [sql`${schema.runs.developer_id} = ${developer_id}`]
+      ...(user_id
+        ? [sql`${schema.runs.owner_user_id} = ${user_id}`]
         : [])
     );
 
@@ -252,11 +252,11 @@ export async function GET(request: NextRequest) {
           run_id: schema.runs.id,
           label: sql<string>`coalesce(${schema.runs.title}, ${schema.runs.slug}, left(${schema.runs.id}::text, 8))`,
           started_at: schema.runs.started_at,
-          developer_id: schema.runs.developer_id,
-          developer_name: sql<string>`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`,
+          developer_name: sql<string>`coalesce(${schema.users.name}, ${schema.users.email})`,
           repo_key: schema.runs.repo_key,
         })
         .from(schema.runs)
+        .innerJoin(schema.users, eq(schema.runs.owner_user_id, schema.users.id))
         .where(baseFilter)
         .orderBy(sql`${schema.runs.started_at} DESC`)
         .limit(30),
@@ -295,13 +295,14 @@ export async function GET(request: NextRequest) {
         .groupBy(sql`extract(hour from ${schema.runs.started_at})`)
         .orderBy(sql`extract(hour from ${schema.runs.started_at})`),
 
-      // 11. Distinct developers for filter dropdown (unfiltered by developer_id)
+      // 11. Distinct developers for filter dropdown (unfiltered by user)
       db
         .select({
-          developer_id: schema.runs.developer_id,
-          developer_name: sql<string>`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`,
+          user_id: schema.runs.owner_user_id,
+          developer_name: sql<string>`coalesce(${schema.users.name}, ${schema.users.email})`,
         })
         .from(schema.runs)
+        .innerJoin(schema.users, eq(schema.runs.owner_user_id, schema.users.id))
         .where(
           and(
             inArray(schema.runs.workspace_id, workspaceIds),
@@ -309,8 +310,8 @@ export async function GET(request: NextRequest) {
             sql`${schema.runs.owner_user_id} IS NOT NULL`
           )
         )
-        .groupBy(schema.runs.developer_id, schema.runs.git_user_name)
-        .orderBy(sql`coalesce(${schema.runs.git_user_name}, left(${schema.runs.developer_id}::text, 8))`),
+        .groupBy(schema.runs.owner_user_id, schema.users.name, schema.users.email)
+        .orderBy(sql`coalesce(${schema.users.name}, ${schema.users.email})`),
     ]);
 
     const summary = summaryRows[0];
@@ -407,7 +408,7 @@ export async function GET(request: NextRequest) {
         }))
         .reverse(),
       developers: developersRows.map((r) => ({
-        developer_id: r.developer_id,
+        user_id: r.user_id!,
         developer_name: r.developer_name,
       })),
       top_repos: topRepoRows.map((r) => ({
