@@ -78,19 +78,24 @@ async function main() {
     commentBody = buildTemplateSummary(context);
   }
 
-  // 4. Post comment via server
-  await fetch(`${serverUrl}/api/v1/runs/${runId}/pr-comment`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      pr_url: prUrl,
-      comment_body: commentBody,
-    }),
-    signal: AbortSignal.timeout(10000),
+  // 4. Format and post comment directly via gh CLI
+  const runUrl = `${serverUrl}/runs/${runId}`;
+  const formattedBody = formatComment(commentBody, runUrl);
+
+  execFileSync("gh", ["pr", "comment", prUrl, "--body", formattedBody], {
+    encoding: "utf-8",
+    timeout: 15000,
   });
+}
+
+function formatComment(body: string, runUrl: string): string {
+  return [
+    "### 🤖 AI Session Context",
+    "",
+    body,
+    "",
+    `[View in Glop](${runUrl})`,
+  ].join("\n");
 }
 
 function buildTemplateSummary(context: {
