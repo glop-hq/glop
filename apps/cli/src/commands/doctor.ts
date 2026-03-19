@@ -94,13 +94,34 @@ export const doctorCommand = new Command("doctor")
     }
 
     // 6. Repo bound to workspace?
-    const repoBinding = loadRepoConfig();
-    if (repoBinding) {
-      check("pass", "Repo bound to workspace", repoBinding.workspace_id);
-    } else if (repoRoot) {
-      check("warn", "Repo bound to workspace", "run `glop link` to bind this repo");
-    } else {
-      check("warn", "Repo bound to workspace", "not in a git repo");
+    if (repoRoot) {
+      const repoBinding = loadRepoConfig();
+      if (repoBinding) {
+        let workspaceLabel = repoBinding.workspace_id;
+        try {
+          const wsRes = await fetch(`${config.server_url}/api/v1/cli/workspaces`, {
+            headers: {
+              Authorization: `Bearer ${config.api_key}`,
+              "X-Machine-Id": config.machine_id,
+            },
+            signal: AbortSignal.timeout(5000),
+          });
+          if (wsRes.ok) {
+            const data = (await wsRes.json()) as {
+              workspaces: { id: string; name: string; slug: string }[];
+            };
+            const ws = data.workspaces.find((w) => w.id === repoBinding.workspace_id);
+            if (ws) {
+              workspaceLabel = ws.name;
+            }
+          }
+        } catch {
+          // fall back to showing the UUID
+        }
+        check("pass", "Repo bound to workspace", workspaceLabel);
+      } else {
+        check("warn", "Repo bound to workspace", "run `glop link` to bind this repo");
+      }
     }
 
     // 7. glop CLI in PATH
