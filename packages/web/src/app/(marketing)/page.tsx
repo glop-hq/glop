@@ -24,6 +24,7 @@ import {
   Hash,
   GitCommit,
   Zap,
+  Github,
 } from "lucide-react";
 import { CopyButton } from "./copy-button";
 
@@ -34,12 +35,22 @@ export default function LandingPage() {
       <header className="border-b border-border/40">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4 sm:px-6">
           <span className="text-lg font-bold tracking-tight">glop</span>
-          <Link
-            href="/login"
-            className="cursor-pointer rounded-md bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
-          >
-            Sign in
-          </Link>
+          <div className="flex items-center gap-3">
+            <a
+              href="https://github.com/glop-hq/glop"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="cursor-pointer text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <Github className="h-5 w-5" />
+            </a>
+            <Link
+              href="/login"
+              className="cursor-pointer rounded-md bg-foreground px-4 py-1.5 text-sm font-medium text-background transition-colors hover:bg-foreground/90"
+            >
+              Sign in
+            </Link>
+          </div>
         </div>
       </header>
 
@@ -500,6 +511,7 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-4 text-xs text-muted-foreground">
             <span>Built from San Francisco</span>
+            <a href="https://github.com/glop-hq/glop" target="_blank" rel="noopener noreferrer" className="cursor-pointer transition-colors hover:text-foreground">GitHub</a>
             <Link href="/terms" className="cursor-pointer transition-colors hover:text-foreground">Terms</Link>
             <Link href="/privacy" className="cursor-pointer transition-colors hover:text-foreground">Privacy</Link>
           </div>
