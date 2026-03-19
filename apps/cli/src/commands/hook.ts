@@ -1,5 +1,8 @@
 import { Command } from "commander";
 import { openSync, readSync, closeSync, readFileSync } from "fs";
+import { spawn } from "child_process";
+import { fileURLToPath } from "url";
+import path from "path";
 import { loadConfig } from "../lib/config.js";
 import { getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 
@@ -71,6 +74,26 @@ export const hookCommand = new Command("__hook")
       if (slug) payload.slug = slug;
     }
 
+    // Detect PR creation for background comment generation
+    const isPrCreation =
+      payload.hook_event_name === "PostToolUse" &&
+      payload.tool_name === "Bash" &&
+      typeof payload.tool_response === "string" &&
+      /\bgh\s+pr\s+create\b/.test(
+        typeof (payload.tool_input as Record<string, unknown>)?.command === "string"
+          ? (payload.tool_input as Record<string, unknown>).command as string
+          : ""
+      ) &&
+      /https:\/\/github\.com\/[^\s]+\/pull\/\d+/.test(payload.tool_response);
+
+    let prUrl: string | null = null;
+    if (isPrCreation) {
+      const prMatch = (payload.tool_response as string).match(
+        /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/
+      );
+      if (prMatch) prUrl = prMatch[1];
+    }
+
     try {
       const res = await fetch(`${config.server_url}/api/v1/ingest/hook`, {
         method: "POST",
@@ -82,12 +105,16 @@ export const hookCommand = new Command("__hook")
         signal: AbortSignal.timeout(5000),
       });
 
+      // Parse response body once (needed for SessionStart and PR comment)
+      const resBody = res.ok
+        ? await res.json().catch(() => ({})) as { run_id?: string }
+        : null;
+
       // On SessionStart, print connection status and run URL
       if (payload.hook_event_name === "SessionStart") {
-        if (res.ok) {
-          const body = await res.json() as { run_id?: string };
-          const runUrl = body.run_id
-            ? `${config.server_url}/runs/${body.run_id}`
+        if (res.ok && resBody) {
+          const runUrl = resBody.run_id
+            ? `${config.server_url}/runs/${resBody.run_id}`
             : null;
           console.log(`glop: connected to ${config.server_url}`);
           if (runUrl) {
@@ -97,6 +124,25 @@ export const hookCommand = new Command("__hook")
           console.log("glop: API key expired or invalid — run `glop auth` to re-authenticate");
         } else {
           console.log(`glop: server returned HTTP ${res.status}`);
+        }
+      }
+
+      // Spawn background worker to generate and post PR comment
+      if (prUrl && resBody?.run_id) {
+        try {
+          const workerPath = path.join(
+            path.dirname(fileURLToPath(import.meta.url)),
+            "lib",
+            "pr-comment-worker.js"
+          );
+          const child = spawn(
+            process.execPath,
+            [workerPath, config.server_url, config.api_key, resBody.run_id, prUrl],
+            { detached: true, stdio: "ignore" }
+          );
+          child.unref();
+        } catch {
+          // Silently ignore — PR comment is best-effort
         }
       }
     } catch {
