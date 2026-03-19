@@ -15,6 +15,15 @@ import {
   Bot,
   User,
   Check,
+  BarChart3,
+  GitPullRequest,
+  Clock,
+  UserPlus,
+  Link2,
+  TrendingUp,
+  Hash,
+  GitCommit,
+  Zap,
 } from "lucide-react";
 import { CopyButton } from "./copy-button";
 
@@ -125,9 +134,9 @@ export default function LandingPage() {
             AI moves fast. You need to keep up.
           </h2>
           <p className="mt-3 max-w-lg text-muted-foreground">
-            Most teams are figuring out AI coding on their own.
-            Glop gives everyone a shared view of how AI is being used,
-            what&apos;s working, and how to do more of it.
+            Most developers are figuring out AI coding on their own.
+            Glop gives your whole team a shared view of what&apos;s working
+            and how to do more of it.
           </p>
 
           <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-8">
@@ -163,9 +172,9 @@ export default function LandingPage() {
           <div className="mt-14 grid items-start gap-8 sm:grid-cols-2">
             {/* Left: steps */}
             <div className="flex flex-col gap-0">
-              <Step number={1} title="Authenticate" description="Links your CLI to your Glop workspace." isLast={false} />
-              <Step number={2} title="Initialize" description="Installs hooks in your repo in seconds." isLast={false} />
-              <Step number={3} title="Start coding" description="Sessions stream to your board." isLast={true} />
+              <Step number={1} title="Auth" command="glop login" description="Links your CLI to your Glop workspace." isLast={false} />
+              <Step number={2} title="Link" command="glop link" description="Installs hooks in your repo in seconds." isLast={false} />
+              <Step number={3} title="Start coding" command="claude" description="Sessions stream to your board." isLast={true} />
             </div>
             {/* Right: terminal */}
             <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
@@ -177,14 +186,14 @@ export default function LandingPage() {
               </div>
               <div className="space-y-4 p-5 font-mono text-sm">
                 <div>
-                  <div className="text-zinc-500">{"# 1. Authenticate"}</div>
+                  <div className="text-zinc-500">{"# 1. Auth"}</div>
                   <div className="flex items-center gap-1 text-zinc-300">
                     <span className="text-green-400">$</span> glop login
                   </div>
                   <div className="mt-0.5 text-xs text-zinc-600">Opened browser for sign in...</div>
                 </div>
                 <div>
-                  <div className="text-zinc-500">{"# 2. Initialize your repo"}</div>
+                  <div className="text-zinc-500">{"# 2. Link your repo"}</div>
                   <div className="flex items-center gap-1 text-zinc-300">
                     <span className="text-green-400">$</span> glop link
                   </div>
@@ -275,14 +284,202 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* Analytics / Insights */}
       <section className="border-t">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Understand what&apos;s working
+          </h2>
+          <p className="mt-3 max-w-lg text-muted-foreground">
+            See which prompts, patterns, and workflows lead to the best
+            outcomes. Spot what&apos;s effective so the whole team can do more of it.
+          </p>
+
+          {/* Mock analytics dashboard */}
+          <div className="mt-12 rounded-xl border bg-card p-1 shadow-sm">
+            <div className="rounded-lg border bg-background">
+              <div className="flex items-center gap-2 border-b px-4 py-2.5">
+                <BarChart3 className="h-4 w-4 text-muted-foreground" />
+                <span className="text-sm font-medium">Team Insights</span>
+                <div className="ml-auto flex gap-1">
+                  {(["7d", "30d", "90d"] as const).map((p) => (
+                    <span
+                      key={p}
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${
+                        p === "30d"
+                          ? "bg-foreground text-background"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              {/* KPI cards */}
+              <div className="grid grid-cols-2 gap-px border-b bg-border sm:grid-cols-4">
+                <MockKpi label="Total Runs" value="342" change="+18%" />
+                <MockKpi label="Avg Turns" value="14.2" />
+                <MockKpi label="Commits / Run" value="2.8" change="+12%" />
+                <MockKpi label="Top Repo" value="acme/api" />
+              </div>
+
+              {/* Mini bar chart */}
+              <div className="px-4 py-4">
+                <div className="mb-2 text-xs font-medium text-muted-foreground">
+                  Runs per day
+                </div>
+                <div className="flex items-end gap-1 h-16">
+                  {[40, 65, 50, 80, 45, 70, 90, 55, 75, 85, 60, 95, 70, 50].map(
+                    (h, i) => (
+                      <div
+                        key={i}
+                        className="flex-1 rounded-sm bg-foreground/15 transition-colors hover:bg-foreground/25"
+                        style={{ height: `${h}%` }}
+                      />
+                    )
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* PR Context Bot */}
+      <section className="border-t bg-muted/30">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Every PR tells the full story
+          </h2>
+          <p className="mt-3 max-w-lg text-muted-foreground">
+            Glop automatically posts a context summary on every AI-generated
+            pull request. Reviewers see what was asked, what changed, and why
+            &ndash; before reading a single line of code.
+          </p>
+
+          {/* Mock PR comment */}
+          <div className="mt-12 rounded-xl border bg-card p-1 shadow-sm">
+            <div className="rounded-lg border bg-background">
+              <div className="flex items-center gap-2 border-b px-4 py-2.5">
+                <GitPullRequest className="h-4 w-4 text-purple-500" />
+                <span className="text-sm font-medium">
+                  Add OAuth2 middleware
+                </span>
+                <span className="ml-1 rounded-full border border-green-200 bg-green-50 px-2 py-0.5 text-xs font-medium text-green-700">
+                  Open
+                </span>
+                <span className="ml-auto text-xs text-muted-foreground">
+                  #142
+                </span>
+              </div>
+
+              <div className="p-4">
+                <div className="rounded-lg border bg-blue-50/50 border-blue-100">
+                  <div className="flex items-center gap-2 border-b border-blue-100 px-3 py-2">
+                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100">
+                      <Bot className="h-3 w-3 text-blue-700" />
+                    </div>
+                    <span className="text-xs font-medium text-blue-900">
+                      Glop Context
+                    </span>
+                    <span className="text-xs text-blue-600">
+                      &middot; posted automatically
+                    </span>
+                  </div>
+                  <div className="space-y-2.5 px-3 py-3 text-sm text-blue-900">
+                    <div>
+                      <div className="text-xs font-medium uppercase tracking-wider text-blue-600 mb-1">
+                        Prompt
+                      </div>
+                      <p className="text-sm">
+                        &quot;Add OAuth2 middleware that validates JWT tokens and
+                        attaches the user to the request context.&quot;
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-blue-700">
+                      <span className="inline-flex items-center gap-1">
+                        <FileEdit className="h-3 w-3" /> 3 files changed
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <Hash className="h-3 w-3" /> 14 conversation turns
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <FlaskConical className="h-3 w-3" /> 24 tests passed
+                      </span>
+                    </div>
+                    <div className="pt-1 text-xs">
+                      <a
+                        href="#"
+                        className="cursor-pointer inline-flex items-center gap-1 font-medium text-blue-700 hover:text-blue-900"
+                      >
+                        View full session on Glop
+                        <ArrowRight className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Built for teams */}
+      <section className="border-t">
+        <div className="mx-auto max-w-5xl px-4 py-20 sm:px-6 sm:py-28">
+          <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
+            Built for teams
+          </h2>
+          <p className="mt-3 max-w-lg text-muted-foreground">
+            Everything your team needs to collaborate on AI-assisted
+            development.
+          </p>
+
+          <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-3 sm:gap-8">
+            <ValueProp
+              icon={Clock}
+              title="Session history"
+              description="Browse, search, and filter every past session. Sort by developer, repo, duration, or date."
+            />
+            <ValueProp
+              icon={UserPlus}
+              title="Workspace management"
+              description="Create workspaces, invite teammates, and assign admin or member roles with a single link."
+            />
+            <ValueProp
+              icon={Link2}
+              title="Shareable links"
+              description="Generate public links to any session. Share with stakeholders, embed in docs, or use for onboarding."
+            />
+            <ValueProp
+              icon={GitCommit}
+              title="Artifact tracking"
+              description="Commits, PRs, CI runs, and preview links are automatically captured and linked to each session."
+            />
+            <ValueProp
+              icon={TrendingUp}
+              title="Usage trends"
+              description="See which repos get the most AI activity, which patterns lead to clean merges, and how usage grows over time."
+            />
+            <ValueProp
+              icon={Zap}
+              title="Real-time board"
+              description="Live view of every active session. See who's coding, who's blocked, and what's in progress right now."
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* CTA */}
+      <section className="border-t bg-muted/30">
         <div className="mx-auto max-w-5xl px-4 py-20 text-center sm:px-6 sm:py-28">
           <h2 className="text-2xl font-bold tracking-tight sm:text-3xl">
             Try it now
           </h2>
           <p className="mx-auto mt-3 max-w-md text-muted-foreground">
-            Free for individual developers. Set up in under a minute.
+            Free to use. Three commands to get started.
           </p>
           <div className="mt-8 inline-flex items-center gap-3 rounded-lg border bg-zinc-950 px-4 py-2.5 font-mono text-sm text-zinc-300">
             <Terminal className="h-4 w-4 text-zinc-500" />
@@ -339,11 +536,13 @@ function ValueProp({
 function Step({
   number,
   title,
+  command,
   description,
   isLast,
 }: {
   number: number;
   title: string;
+  command: string;
   description: string;
   isLast: boolean;
 }) {
@@ -357,7 +556,10 @@ function Step({
       </div>
       <div className="pb-8">
         <h3 className="mt-1 text-base font-semibold">{title}</h3>
-        <p className="mt-0.5 text-sm text-muted-foreground">
+        <code className="mt-1 inline-block rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+          {command}
+        </code>
+        <p className="mt-1 text-sm text-muted-foreground">
           {description}
         </p>
       </div>
@@ -468,6 +670,36 @@ function MockMessage({
         }`}
       >
         {content}
+      </div>
+    </div>
+  );
+}
+
+function MockKpi({
+  label,
+  value,
+  change,
+  down,
+}: {
+  label: string;
+  value: string;
+  change?: string;
+  down?: boolean;
+}) {
+  return (
+    <div className="bg-background px-4 py-3">
+      <div className="text-xs text-muted-foreground">{label}</div>
+      <div className="mt-1 flex items-baseline gap-2">
+        <span className="text-lg font-semibold">{value}</span>
+        {change && (
+          <span
+            className={`text-xs font-medium ${
+              down ? "text-red-500" : "text-green-600"
+            }`}
+          >
+            {change}
+          </span>
+        )}
       </div>
     </div>
   );
