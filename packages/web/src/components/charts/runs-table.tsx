@@ -2,8 +2,10 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, ChevronLeft, ChevronRight } from "lucide-react";
 import type { RunBreakdown } from "@glop/shared";
+
+const PAGE_SIZE = 30;
 
 type SortKey =
   | "started_at"
@@ -13,10 +15,31 @@ type SortKey =
   | "prs"
   | "compactions";
 
-function shortenRepo(key: string): string {
+function parseRepo(key: string): { org: string; repo: string } {
   const parts = key.split("/");
-  if (parts.length >= 3) return parts.slice(-2).join("/");
-  return key;
+  if (parts.length >= 3) {
+    return { org: parts[parts.length - 2], repo: parts[parts.length - 1] };
+  }
+  if (parts.length === 2) {
+    return { org: parts[0], repo: parts[1] };
+  }
+  return { org: "", repo: key };
+}
+
+function RepoName({ repoKey }: { repoKey: string }) {
+  const { org, repo } = parseRepo(repoKey);
+  const full = org ? `${org}/${repo}` : repo;
+  return (
+    <span className="flex min-w-0" title={full}>
+      {org && (
+        <>
+          <span className="truncate text-muted-foreground">{org}</span>
+          <span className="shrink-0 text-muted-foreground">/</span>
+        </>
+      )}
+      <span className="shrink-0">{repo}</span>
+    </span>
+  );
 }
 
 function InlineBar({ value, max }: { value: number; max: number }) {
@@ -38,6 +61,7 @@ function InlineBar({ value, max }: { value: number; max: number }) {
 export function RunsTable({ data }: { data: RunBreakdown[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("started_at");
   const [sortAsc, setSortAsc] = useState(false);
+  const [page, setPage] = useState(0);
 
   const maxes = useMemo(
     () => ({
@@ -64,6 +88,9 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
     return arr;
   }, [data, sortKey, sortAsc]);
 
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const paged = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
       setSortAsc(!sortAsc);
@@ -71,6 +98,7 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
       setSortKey(key);
       setSortAsc(false);
     }
+    setPage(0);
   }
 
   if (data.length === 0) {
@@ -82,7 +110,6 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
   }
 
   const columns: { key: SortKey; label: string }[] = [
-    { key: "started_at", label: "Date" },
     { key: "conversation_turns", label: "Turns" },
     { key: "commits", label: "Commits" },
     { key: "lines_changed", label: "Lines" },
@@ -91,82 +118,141 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
   ];
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="pb-2 pr-4 font-medium">Run</th>
-            <th className="pb-2 pr-4 font-medium">Repo</th>
-            <th className="pb-2 pr-4 font-medium">Developer</th>
-            {columns.map((col) => (
-              <th key={col.key} className="pb-2 pr-2 font-medium">
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full table-fixed text-sm">
+          <colgroup>
+            <col className="w-[150px]" />
+            <col className="w-[170px]" />
+            <col className="w-[180px]" />
+            <col />
+            <col />
+            <col />
+            <col />
+            <col />
+          </colgroup>
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="pb-2 pr-2 font-medium">
                 <button
                   className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground"
-                  onClick={() => toggleSort(col.key)}
+                  onClick={() => toggleSort("started_at")}
                 >
-                  {col.label}
+                  Date
                   <ArrowUpDown
-                    className={`h-3 w-3 ${sortKey === col.key ? "text-foreground" : "text-muted-foreground/50"}`}
+                    className={`h-3 w-3 ${sortKey === "started_at" ? "text-foreground" : "text-muted-foreground/50"}`}
                   />
                 </button>
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {sorted.map((run) => {
-            const d = new Date(run.started_at);
-            return (
-              <tr
-                key={run.run_id}
-                className="border-b last:border-0 hover:bg-muted/50"
-              >
-                <td className="py-2 pr-4">
-                  <Link
-                    href={`/runs/${run.run_id}`}
-                    className="font-medium text-foreground hover:underline"
+              <th className="pb-2 pr-2 font-medium">Developer</th>
+              <th className="pb-2 pr-2 font-medium">Repo</th>
+              {columns.map((col) => (
+                <th key={col.key} className="pb-2 pr-2 font-medium">
+                  <button
+                    className="inline-flex cursor-pointer items-center gap-1 hover:text-foreground"
+                    onClick={() => toggleSort(col.key)}
                   >
-                    {run.label}
-                  </Link>
-                </td>
-                <td className="py-2 pr-4 text-muted-foreground">
-                  {shortenRepo(run.repo_key)}
-                </td>
-                <td className="py-2 pr-4 text-muted-foreground">
-                  {run.developer_name}
-                </td>
-                <td className="py-2 pr-2 text-muted-foreground">
-                  {d.toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                </td>
-                <td className="w-28 py-2 pr-2">
-                  <InlineBar
-                    value={run.conversation_turns}
-                    max={maxes.conversation_turns}
-                  />
-                </td>
-                <td className="w-28 py-2 pr-2">
-                  <InlineBar value={run.commits} max={maxes.commits} />
-                </td>
-                <td className="w-28 py-2 pr-2">
-                  <InlineBar value={run.lines_changed} max={maxes.lines_changed} />
-                </td>
-                <td className="w-28 py-2 pr-2">
-                  <InlineBar value={run.prs} max={maxes.prs} />
-                </td>
-                <td className="w-28 py-2 pr-2">
-                  <InlineBar
-                    value={run.compactions}
-                    max={maxes.compactions}
-                  />
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+                    {col.label}
+                    <ArrowUpDown
+                      className={`h-3 w-3 ${sortKey === col.key ? "text-foreground" : "text-muted-foreground/50"}`}
+                    />
+                  </button>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {paged.map((run) => {
+              const d = new Date(run.started_at);
+              return (
+                <tr
+                  key={run.run_id}
+                  className="border-b last:border-0 hover:bg-muted/50"
+                >
+                  <td className="py-2 pr-2 text-muted-foreground whitespace-nowrap">
+                    {d.toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                    })}{" "}
+                    {d.toLocaleTimeString(undefined, {
+                      hour: "numeric",
+                      minute: "2-digit",
+                    })}
+                  </td>
+                  <td className="py-2 pr-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      {run.developer_avatar_url ? (
+                        <img
+                          src={run.developer_avatar_url}
+                          alt={run.developer_name}
+                          className="h-6 w-6 shrink-0 rounded-full"
+                        />
+                      ) : (
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                          {run.developer_name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <span className="truncate font-medium">{run.developer_name}</span>
+                    </div>
+                  </td>
+                  <td className="py-2 pr-2">
+                    <Link
+                      href={`/runs/${run.run_id}`}
+                      className="flex min-w-0 font-medium text-foreground hover:underline"
+                    >
+                      <RepoName repoKey={run.repo_key} />
+                    </Link>
+                  </td>
+                  <td className="py-2 pr-2">
+                    <InlineBar
+                      value={run.conversation_turns}
+                      max={maxes.conversation_turns}
+                    />
+                  </td>
+                  <td className="py-2 pr-2">
+                    <InlineBar value={run.commits} max={maxes.commits} />
+                  </td>
+                  <td className="py-2 pr-2">
+                    <InlineBar value={run.lines_changed} max={maxes.lines_changed} />
+                  </td>
+                  <td className="py-2 pr-2">
+                    <InlineBar value={run.prs} max={maxes.prs} />
+                  </td>
+                  <td className="py-2 pr-2">
+                    <InlineBar
+                      value={run.compactions}
+                      max={maxes.compactions}
+                    />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t pt-3 mt-1">
+          <span className="text-xs text-muted-foreground">
+            {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, sorted.length)} of {sorted.length}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setPage(page - 1)}
+              disabled={page === 0}
+              className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-30"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setPage(page + 1)}
+              disabled={page >= totalPages - 1}
+              className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground disabled:cursor-default disabled:opacity-30"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

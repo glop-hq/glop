@@ -253,6 +253,7 @@ export async function GET(request: NextRequest) {
           label: sql<string>`coalesce(${schema.runs.title}, ${schema.runs.slug}, left(${schema.runs.id}::text, 8))`,
           started_at: schema.runs.started_at,
           developer_name: sql<string>`coalesce(${schema.users.name}, ${schema.users.email})`,
+          developer_avatar_url: schema.users.avatar_url,
           repo_key: schema.runs.repo_key,
         })
         .from(schema.runs)
@@ -300,6 +301,7 @@ export async function GET(request: NextRequest) {
         .select({
           user_id: schema.runs.owner_user_id,
           developer_name: sql<string>`coalesce(${schema.users.name}, ${schema.users.email})`,
+          avatar_url: schema.users.avatar_url,
         })
         .from(schema.runs)
         .innerJoin(schema.users, eq(schema.runs.owner_user_id, schema.users.id))
@@ -310,7 +312,7 @@ export async function GET(request: NextRequest) {
             sql`${schema.runs.owner_user_id} IS NOT NULL`
           )
         )
-        .groupBy(schema.runs.owner_user_id, schema.users.name, schema.users.email)
+        .groupBy(schema.runs.owner_user_id, schema.users.name, schema.users.email, schema.users.avatar_url)
         .orderBy(sql`coalesce(${schema.users.name}, ${schema.users.email})`),
     ]);
 
@@ -399,6 +401,7 @@ export async function GET(request: NextRequest) {
           label: r.label,
           started_at: r.started_at,
           developer_name: r.developer_name,
+          developer_avatar_url: r.developer_avatar_url,
           repo_key: r.repo_key,
           conversation_turns: turnsByRun.get(r.run_id) ?? 0,
           commits: commitsByRun.get(r.run_id) ?? 0,
@@ -410,6 +413,7 @@ export async function GET(request: NextRequest) {
       developers: developersRows.map((r) => ({
         user_id: r.user_id!,
         developer_name: r.developer_name,
+        avatar_url: r.avatar_url,
       })),
       top_repos: topRepoRows.map((r) => ({
         repo_key: r.repo_key,
@@ -432,6 +436,7 @@ export async function GET(request: NextRequest) {
       const devMap = new Map<
         string,
         {
+          avatar_url: string | null;
           runs: number;
           turns: number;
           commits: number;
@@ -444,6 +449,7 @@ export async function GET(request: NextRequest) {
 
       for (const row of recentRunRows) {
         const entry = devMap.get(row.developer_name) ?? {
+          avatar_url: row.developer_avatar_url,
           runs: 0,
           turns: 0,
           commits: 0,
@@ -468,6 +474,7 @@ export async function GET(request: NextRequest) {
       response.developer_stats = Array.from(devMap.entries())
         .map(([name, s]) => ({
           developer_name: name,
+          developer_avatar_url: s.avatar_url,
           run_count: s.runs,
           avg_conversation_turns: s.runs > 0 ? round1(s.turns / s.runs) : 0,
           avg_turns_before_first_commit:

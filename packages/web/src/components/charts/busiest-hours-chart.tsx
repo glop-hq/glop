@@ -26,24 +26,38 @@ export function BusiestHoursChart({ data }: { data: BusiestHour[] }) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={formatted}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-border"
+          vertical={false}
+          strokeOpacity={0.5}
+        />
         <XAxis
           dataKey="label"
           tick={{ fontSize: 11 }}
           className="text-muted-foreground"
           interval={2}
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
         />
         <YAxis
           allowDecimals={false}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
         />
         <Tooltip
+          cursor={{ fill: "var(--muted)", opacity: 0.5 }}
           contentStyle={{
-            backgroundColor: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
+            backgroundColor: "var(--popover)",
+            border: "none",
             borderRadius: "0.5rem",
-            color: "hsl(var(--popover-foreground))",
+            color: "var(--popover-foreground)",
+            boxShadow:
+              "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
           labelFormatter={(_, payload) => {
             if (payload?.[0]) {
@@ -52,7 +66,7 @@ export function BusiestHoursChart({ data }: { data: BusiestHour[] }) {
             return "";
           }}
         />
-        <Bar dataKey="run_count" fill="var(--chart-1)" name="Runs" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="run_count" fill="var(--chart-1)" name="Runs" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

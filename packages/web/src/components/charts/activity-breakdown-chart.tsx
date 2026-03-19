@@ -30,12 +30,20 @@ export function ActivityBreakdownChart({
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={formatted} layout="vertical">
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-border"
+          horizontal={false}
+          strokeOpacity={0.5}
+        />
         <XAxis
           type="number"
           allowDecimals={false}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
         />
         <YAxis
           type="category"
@@ -43,16 +51,22 @@ export function ActivityBreakdownChart({
           width={100}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
         />
         <Tooltip
+          cursor={{ fill: "var(--muted)", opacity: 0.5 }}
           contentStyle={{
-            backgroundColor: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
+            backgroundColor: "var(--popover)",
+            border: "none",
             borderRadius: "0.5rem",
-            color: "hsl(var(--popover-foreground))",
+            color: "var(--popover-foreground)",
+            boxShadow:
+              "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
         />
-        <Bar dataKey="count" fill="var(--chart-3)" name="Runs" radius={[0, 4, 4, 0]} />
+        <Bar dataKey="count" fill="var(--chart-3)" name="Runs" radius={[0, 6, 6, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -83,7 +83,7 @@ function DeveloperSelect({
   value,
   onChange,
 }: {
-  developers: { user_id: string; developer_name: string }[];
+  developers: { user_id: string; developer_name: string; avatar_url: string | null }[];
   value: string | undefined;
   onChange: (id: string | undefined) => void;
 }) {
@@ -113,6 +113,13 @@ function DeveloperSelect({
             : "text-muted-foreground hover:text-foreground"
         )}
       >
+        {selected?.avatar_url ? (
+          <img
+            src={selected.avatar_url}
+            alt={selected.developer_name}
+            className="h-5 w-5 rounded-full"
+          />
+        ) : null}
         {selected ? selected.developer_name : "Everyone"}
         <ChevronDown className="h-3.5 w-3.5" />
       </button>
@@ -142,7 +149,20 @@ function DeveloperSelect({
                 value === dev.user_id && "bg-muted font-medium"
               )}
             >
-              {dev.developer_name}
+              <span className="flex items-center gap-2">
+                {dev.avatar_url ? (
+                  <img
+                    src={dev.avatar_url}
+                    alt={dev.developer_name}
+                    className="h-5 w-5 rounded-full"
+                  />
+                ) : (
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground">
+                    {dev.developer_name.charAt(0).toUpperCase()}
+                  </span>
+                )}
+                {dev.developer_name}
+              </span>
             </button>
           ))}
         </div>

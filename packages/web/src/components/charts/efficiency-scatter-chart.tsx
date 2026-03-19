@@ -61,7 +61,12 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
   return (
     <ResponsiveContainer width="100%" height={350}>
       <ScatterChart margin={{ top: 10, right: 20, bottom: 10, left: 10 }}>
-        <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+        <CartesianGrid
+          strokeDasharray="3 3"
+          className="stroke-border"
+          vertical={false}
+          strokeOpacity={0.5}
+        />
         <XAxis
           type="number"
           dataKey="x"
@@ -69,6 +74,9 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
           allowDecimals={false}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
           label={{
             value: "Conversation Turns",
             position: "insideBottom",
@@ -84,6 +92,9 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
           allowDecimals={false}
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
+          axisLine={false}
+          tickLine={false}
+          tickMargin={8}
           label={{
             value: "Lines Changed",
             angle: -90,
@@ -95,10 +106,12 @@ export function EfficiencyScatterChart({ data }: { data: RunBreakdown[] }) {
         <ZAxis type="number" dataKey="z" range={[40, 400]} />
         <Tooltip
           contentStyle={{
-            backgroundColor: "hsl(var(--popover))",
-            border: "1px solid hsl(var(--border))",
+            backgroundColor: "var(--popover)",
+            border: "none",
             borderRadius: "0.5rem",
-            color: "hsl(var(--popover-foreground))",
+            color: "var(--popover-foreground)",
+            boxShadow:
+              "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
           content={({ payload }) => {
             if (!payload?.length) return null;
