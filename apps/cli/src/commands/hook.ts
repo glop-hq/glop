@@ -137,8 +137,8 @@ export const hookCommand = new Command("__hook")
           );
           const child = spawn(
             process.execPath,
-            [workerPath, config.server_url, config.api_key, resBody.run_id, prUrl],
-            { detached: true, stdio: "ignore" }
+            [workerPath, config.server_url, resBody.run_id, prUrl],
+            { detached: true, stdio: "ignore", env: { ...process.env, GLOP_API_KEY: config.api_key } }
           );
           child.unref();
         } catch {

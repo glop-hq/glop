@@ -2,12 +2,14 @@
  * Background worker that generates and posts a PR context comment.
  * Invoked as a detached child process by the hook command.
  *
- * Args: serverUrl apiKey runId prUrl
+ * Args: serverUrl runId prUrl
+ * Env:  GLOP_API_KEY
  */
 
 import { execFileSync } from "child_process";
 
-const [serverUrl, apiKey, runId, prUrl] = process.argv.slice(2);
+const [serverUrl, runId, prUrl] = process.argv.slice(2);
+const apiKey = process.env.GLOP_API_KEY;
 
 if (!serverUrl || !apiKey || !runId || !prUrl) {
   process.exit(1);

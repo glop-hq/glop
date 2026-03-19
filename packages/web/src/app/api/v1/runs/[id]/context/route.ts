@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
+import { eq, asc } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 
@@ -53,7 +53,8 @@ export async function GET(
     const events = await db
       .select({ payload: schema.events.payload })
       .from(schema.events)
-      .where(eq(schema.events.run_id, runId));
+      .where(eq(schema.events.run_id, runId))
+      .orderBy(asc(schema.events.occurred_at));
 
     const prompts: string[] = [];
     const toolUseLabels: string[] = [];
