@@ -21,6 +21,7 @@ export interface RunsPerDay {
 
 export interface DeveloperStats {
   developer_name: string;
+  developer_avatar_url: string | null;
   run_count: number;
   avg_conversation_turns: number;
   avg_turns_before_first_commit: number;
@@ -44,6 +45,7 @@ export interface RunBreakdown {
   label: string;
   started_at: string;
   developer_name: string;
+  developer_avatar_url: string | null;
   repo_key: string;
   conversation_turns: number;
   commits: number;
@@ -55,6 +57,7 @@ export interface RunBreakdown {
 export interface DeveloperOption {
   user_id: string;
   developer_name: string;
+  avatar_url: string | null;
 }
 
 export interface BusiestHour {
