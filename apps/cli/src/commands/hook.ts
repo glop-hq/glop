@@ -8,6 +8,16 @@ import { getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffSt
 
 const PR_URL_RE = /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/;
 
+/** Extract combined output from a Bash tool_response ({stdout, stderr} object). */
+function extractBashOutput(response: unknown): string {
+  if (!response || typeof response !== "object") return "";
+  const r = response as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof r.stdout === "string") parts.push(r.stdout);
+  if (typeof r.stderr === "string") parts.push(r.stderr);
+  return parts.join("\n");
+}
+
 function extractSlugFromTranscript(transcriptPath: string): string | null {
   try {
     const fd = openSync(transcriptPath, "r");
@@ -57,16 +67,17 @@ export const hookCommand = new Command("__hook")
     payload.git_user_email = getGitUserEmail();
 
     // Enrich commits with diff stats
+    const toolOutput = payload.hook_event_name === "PostToolUse" && payload.tool_name === "Bash"
+      ? extractBashOutput(payload.tool_response)
+      : "";
     if (
-      payload.hook_event_name === "PostToolUse" &&
-      payload.tool_name === "Bash" &&
-      typeof payload.tool_response === "string" &&
+      toolOutput &&
       /\bgit\s+commit\b/.test(
         typeof (payload.tool_input as Record<string, unknown>)?.command === "string"
           ? (payload.tool_input as Record<string, unknown>).command as string
           : ""
       ) &&
-      /\[\w[^\]]*\s+[a-f0-9]{7,}\]/.test(payload.tool_response)
+      /\[\w[^\]]*\s+[a-f0-9]{7,}\]/.test(toolOutput)
     ) {
       const diffStats = getCommitDiffStats();
       if (diffStats) {
@@ -84,16 +95,14 @@ export const hookCommand = new Command("__hook")
     // Detect PR creation for background comment generation
     let prUrl: string | null = null;
     if (
-      payload.hook_event_name === "PostToolUse" &&
-      payload.tool_name === "Bash" &&
-      typeof payload.tool_response === "string" &&
+      toolOutput &&
       /\bgh\s+pr\s+create\b/.test(
         typeof (payload.tool_input as Record<string, unknown>)?.command === "string"
           ? (payload.tool_input as Record<string, unknown>).command as string
           : ""
       )
     ) {
-      const prMatch = (payload.tool_response as string).match(PR_URL_RE);
+      const prMatch = toolOutput.match(PR_URL_RE);
       if (prMatch) prUrl = prMatch[1];
     }
 

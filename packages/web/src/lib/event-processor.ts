@@ -8,7 +8,7 @@ import {
   type ClassifiedActivity,
 } from "@glop/shared";
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
-import { extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
+import { extractBashOutput, extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -259,8 +259,7 @@ export async function processHook(
       typeof (rawPayload.tool_input as Record<string, unknown>)?.command === "string"
         ? (rawPayload.tool_input as Record<string, unknown>).command as string
         : "";
-    const resp = rawPayload.tool_response as string | Record<string, unknown>;
-    const output = typeof resp === "string" ? resp : typeof resp.stdout === "string" ? resp.stdout : "";
+    const output = extractBashOutput(rawPayload.tool_response);
 
     const commit = extractCommitArtifact(command, output, ctx.repo_key);
     if (commit) {

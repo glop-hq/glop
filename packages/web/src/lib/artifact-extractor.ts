@@ -14,6 +14,16 @@ export interface PrArtifact {
   external_id: string;
 }
 
+/** Extract combined output from a Bash tool_response ({stdout, stderr} object). */
+export function extractBashOutput(response: unknown): string {
+  if (!response || typeof response !== "object") return "";
+  const r = response as Record<string, unknown>;
+  const parts: string[] = [];
+  if (typeof r.stdout === "string") parts.push(r.stdout);
+  if (typeof r.stderr === "string") parts.push(r.stderr);
+  return parts.join("\n");
+}
+
 const COMMIT_PATTERN = /\[[\w/.-]+\s+([a-f0-9]{7,})\]\s+(.+)/;
 const PR_URL_PATTERN = /(https:\/\/github\.com\/[^\s]+\/pull\/(\d+))/;
 
