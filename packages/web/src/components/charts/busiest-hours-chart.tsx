@@ -41,14 +41,7 @@ export function BusiestHoursChart({ data }: { data: BusiestHour[] }) {
           tickLine={false}
           tickMargin={8}
         />
-        <YAxis
-          allowDecimals={false}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
-          axisLine={false}
-          tickLine={false}
-          tickMargin={8}
-        />
+        <YAxis hide />
         <Tooltip
           cursor={{ fill: "var(--muted)", opacity: 0.5 }}
           contentStyle={{
@@ -66,7 +59,7 @@ export function BusiestHoursChart({ data }: { data: BusiestHour[] }) {
             return "";
           }}
         />
-        <Bar dataKey="run_count" fill="var(--chart-1)" name="Runs" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="run_count" fill="var(--chart-1)" name="Runs" radius={[8, 8, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

@@ -10,6 +10,12 @@ export interface AnalyticsSummary {
   prs_per_run: number;
   compactions_per_run: number;
   runs_per_day: number;
+  total_runs_change?: number | null;
+  avg_conversation_turns_change?: number | null;
+  avg_turns_before_first_commit_change?: number | null;
+  commits_per_run_change?: number | null;
+  prs_per_run_change?: number | null;
+  compactions_per_run_change?: number | null;
 }
 
 export interface RunsPerDay {

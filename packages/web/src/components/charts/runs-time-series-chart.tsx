@@ -1,26 +1,91 @@
 "use client";
 
+import { useMemo } from "react";
 import {
-  AreaChart,
-  Area,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
 } from "recharts";
-import type { RunsPerDay } from "@glop/shared";
+import type { AnalyticsPeriod, RunsPerDay } from "@glop/shared";
 
-export function RunsTimeSeriesChart({ data }: { data: RunsPerDay[] }) {
+interface BucketedData {
+  label: string;
+  total: number;
+}
+
+function aggregateData(
+  data: RunsPerDay[],
+  period: AnalyticsPeriod
+): BucketedData[] {
+  if (period === "7d") {
+    return data.map((d) => {
+      const date = new Date(d.date + "T00:00:00");
+      return {
+        label: date.toLocaleDateString(undefined, {
+          weekday: "short",
+        }),
+        total: d.total,
+      };
+    });
+  }
+
+  if (period === "30d") {
+    // Aggregate by week
+    const weeks: Map<string, number> = new Map();
+    for (const d of data) {
+      const date = new Date(d.date + "T00:00:00");
+      // Get Monday of the week
+      const day = date.getDay();
+      const monday = new Date(date);
+      monday.setDate(date.getDate() - ((day + 6) % 7));
+      const key = monday.toISOString().slice(0, 10);
+      weeks.set(key, (weeks.get(key) ?? 0) + d.total);
+    }
+    return Array.from(weeks.entries()).map(([key, total]) => {
+      const date = new Date(key + "T00:00:00");
+      return {
+        label: date.toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        total,
+      };
+    });
+  }
+
+  // 90d — aggregate by month
+  const months: Map<string, number> = new Map();
+  for (const d of data) {
+    const key = d.date.slice(0, 7); // "YYYY-MM"
+    months.set(key, (months.get(key) ?? 0) + d.total);
+  }
+  return Array.from(months.entries()).map(([key, total]) => {
+    const date = new Date(key + "-01T00:00:00");
+    return {
+      label: date.toLocaleDateString(undefined, {
+        month: "short",
+      }),
+      total,
+    };
+  });
+}
+
+export function RunsTimeSeriesChart({
+  data,
+  period,
+}: {
+  data: RunsPerDay[];
+  period: AnalyticsPeriod;
+}) {
+  const chartData = useMemo(() => aggregateData(data, period), [data, period]);
+
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <AreaChart data={data}>
-        <defs>
-          <linearGradient id="runsGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--chart-2)" stopOpacity={0.3} />
-            <stop offset="100%" stopColor="var(--chart-2)" stopOpacity={0} />
-          </linearGradient>
-        </defs>
+    <ResponsiveContainer width="100%" height={120}>
+      <BarChart data={chartData}>
         <CartesianGrid
           strokeDasharray="3 3"
           className="stroke-border"
@@ -28,30 +93,16 @@ export function RunsTimeSeriesChart({ data }: { data: RunsPerDay[] }) {
           strokeOpacity={0.5}
         />
         <XAxis
-          dataKey="date"
-          tick={{ fontSize: 12 }}
-          tickFormatter={(v) => {
-            const d = new Date(v + "T00:00:00");
-            return d.toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-            });
-          }}
-          className="text-muted-foreground"
-          axisLine={false}
-          tickLine={false}
-          tickMargin={8}
-        />
-        <YAxis
-          allowDecimals={false}
+          dataKey="label"
           tick={{ fontSize: 12 }}
           className="text-muted-foreground"
           axisLine={false}
           tickLine={false}
           tickMargin={8}
         />
+        <YAxis hide />
         <Tooltip
-          cursor={{ stroke: "var(--muted)", strokeWidth: 1 }}
+          cursor={{ fill: "var(--muted)", opacity: 0.3 }}
           contentStyle={{
             backgroundColor: "var(--popover)",
             border: "none",
@@ -60,26 +111,14 @@ export function RunsTimeSeriesChart({ data }: { data: RunsPerDay[] }) {
             boxShadow:
               "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
-          labelFormatter={(v) => {
-            const d = new Date(v + "T00:00:00");
-            return d.toLocaleDateString(undefined, {
-              weekday: "short",
-              month: "short",
-              day: "numeric",
-            });
-          }}
         />
-        <Area
+        <Bar
           dataKey="total"
-          type="monotone"
-          stroke="var(--chart-2)"
-          strokeWidth={2}
-          fill="url(#runsGradient)"
+          fill="var(--chart-2)"
+          radius={[8, 8, 0, 0]}
           name="Runs"
-          dot={false}
-          activeDot={{ r: 4, strokeWidth: 0 }}
         />
-      </AreaChart>
+      </BarChart>
     </ResponsiveContainer>
   );
 }

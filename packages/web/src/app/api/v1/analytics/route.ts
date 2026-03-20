@@ -89,6 +89,14 @@ export async function GET(request: NextRequest) {
     const periodStart = getPeriodStart(period);
     const periodStartStr = periodStart.toISOString();
 
+    // Previous period: same duration ending where current period starts
+    const days = PERIOD_DAYS[period];
+    const prevPeriodEnd = new Date(periodStart);
+    const prevPeriodStart = new Date(periodStart);
+    prevPeriodStart.setDate(prevPeriodStart.getDate() - days);
+    const prevPeriodStartStr = prevPeriodStart.toISOString();
+    const prevPeriodEndStr = prevPeriodEnd.toISOString();
+
     const baseFilter = and(
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
@@ -101,6 +109,26 @@ export async function GET(request: NextRequest) {
     const runsJoinFilter = and(
       inArray(schema.runs.workspace_id, workspaceIds),
       sql`${schema.runs.started_at} >= ${periodStartStr}`,
+      sql`${schema.runs.owner_user_id} IS NOT NULL`,
+      ...(user_id
+        ? [sql`${schema.runs.owner_user_id} = ${user_id}`]
+        : [])
+    );
+
+    const prevBaseFilter = and(
+      inArray(schema.runs.workspace_id, workspaceIds),
+      sql`${schema.runs.started_at} >= ${prevPeriodStartStr}`,
+      sql`${schema.runs.started_at} < ${prevPeriodEndStr}`,
+      sql`${schema.runs.owner_user_id} IS NOT NULL`,
+      ...(user_id
+        ? [sql`${schema.runs.owner_user_id} = ${user_id}`]
+        : [])
+    );
+
+    const prevJoinFilter = and(
+      inArray(schema.runs.workspace_id, workspaceIds),
+      sql`${schema.runs.started_at} >= ${prevPeriodStartStr}`,
+      sql`${schema.runs.started_at} < ${prevPeriodEndStr}`,
       sql`${schema.runs.owner_user_id} IS NOT NULL`,
       ...(user_id
         ? [sql`${schema.runs.owner_user_id} = ${user_id}`]
@@ -121,7 +149,13 @@ export async function GET(request: NextRequest) {
       topRepoRows,
       activityRows,
       busiestHoursRows,
-      developersRows
+      developersRows,
+      prevSummaryRows,
+      prevTurnsPerRunRows,
+      prevArtifactRows,
+      prevFirstCommitRows,
+      prevEventTimestampRows,
+      prevCompactionsPerRunRows,
     ] = await Promise.all([
       // 1. Summary
       db
@@ -314,13 +348,103 @@ export async function GET(request: NextRequest) {
         )
         .groupBy(schema.runs.owner_user_id, schema.users.name, schema.users.email, schema.users.avatar_url)
         .orderBy(sql`coalesce(${schema.users.name}, ${schema.users.email})`),
+
+      // --- Previous period queries for % change ---
+
+      // Prev summary
+      db
+        .select({
+          total_runs: sql<number>`count(*)`,
+        })
+        .from(schema.runs)
+        .where(prevBaseFilter),
+
+      // Prev turns per run
+      db
+        .select({
+          run_id: schema.events.run_id,
+          turn_count: sql<number>`count(*)`,
+        })
+        .from(schema.events)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.events.run_id}`)
+        .where(
+          and(
+            prevJoinFilter,
+            inArray(schema.events.event_type, ["run.prompt", "run.response"])
+          )
+        )
+        .groupBy(schema.events.run_id),
+
+      // Prev artifacts per run
+      db
+        .select({
+          run_id: schema.artifacts.run_id,
+          artifact_type: schema.artifacts.artifact_type,
+          artifact_count: sql<number>`count(*)`,
+        })
+        .from(schema.artifacts)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.artifacts.run_id}`)
+        .where(
+          and(
+            prevJoinFilter,
+            inArray(schema.artifacts.artifact_type, ["commit", "pr"])
+          )
+        )
+        .groupBy(schema.artifacts.run_id, schema.artifacts.artifact_type),
+
+      // Prev first commit per run
+      db
+        .select({
+          run_id: schema.artifacts.run_id,
+          first_commit_at: sql<string>`min(${schema.artifacts.created_at})`,
+        })
+        .from(schema.artifacts)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.artifacts.run_id}`)
+        .where(
+          and(
+            prevJoinFilter,
+            sql`${schema.artifacts.artifact_type} = 'commit'`
+          )
+        )
+        .groupBy(schema.artifacts.run_id),
+
+      // Prev event timestamps for turns-before-commit
+      db
+        .select({
+          run_id: schema.events.run_id,
+          occurred_at: schema.events.occurred_at,
+        })
+        .from(schema.events)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.events.run_id}`)
+        .where(
+          and(
+            prevJoinFilter,
+            inArray(schema.events.event_type, ["run.prompt", "run.response"]),
+            sql`EXISTS (SELECT 1 FROM artifacts a WHERE a.run_id = ${schema.events.run_id} AND a.artifact_type = 'commit')`
+          )
+        ),
+
+      // Prev compactions per run
+      db
+        .select({
+          run_id: schema.events.run_id,
+          compaction_count: sql<number>`count(*)`,
+        })
+        .from(schema.events)
+        .innerJoin(schema.runs, sql`${schema.runs.id} = ${schema.events.run_id}`)
+        .where(
+          and(
+            prevJoinFilter,
+            sql`${schema.events.event_type} = 'run.context_compacted'`
+          )
+        )
+        .groupBy(schema.events.run_id),
     ]);
 
     const summary = summaryRows[0];
     const totalRuns = Number(summary?.total_runs ?? 0);
     const completedRuns = Number(summary?.completed_runs ?? 0);
     const failedRuns = Number(summary?.failed_runs ?? 0);
-    const days = PERIOD_DAYS[period];
 
     // Build lookup maps
     const turnsByRun = new Map(
@@ -373,6 +497,58 @@ export async function GET(request: NextRequest) {
     );
     const runsWithCommits = turnsBeforeCommitByRun.size;
 
+    // --- Previous period aggregate metrics ---
+    const prevTotalRuns = Number(prevSummaryRows[0]?.total_runs ?? 0);
+
+    const prevTurnsByRun = new Map(
+      prevTurnsPerRunRows.map((r) => [r.run_id, Number(r.turn_count)])
+    );
+    const prevCommitsByRun = new Map<string, number>();
+    const prevPrsByRun = new Map<string, number>();
+    for (const row of prevArtifactRows) {
+      const count = Number(row.artifact_count);
+      if (row.artifact_type === "commit") {
+        prevCommitsByRun.set(row.run_id, (prevCommitsByRun.get(row.run_id) ?? 0) + count);
+      } else {
+        prevPrsByRun.set(row.run_id, (prevPrsByRun.get(row.run_id) ?? 0) + count);
+      }
+    }
+    const prevCompactionsByRun = new Map(
+      prevCompactionsPerRunRows.map((r) => [r.run_id, Number(r.compaction_count)])
+    );
+
+    const prevFirstCommitByRun = new Map(
+      prevFirstCommitRows.map((r) => [r.run_id, r.first_commit_at])
+    );
+    const prevTurnsBeforeCommitByRun = new Map<string, number>();
+    for (const evt of prevEventTimestampRows) {
+      const fc = prevFirstCommitByRun.get(evt.run_id);
+      if (fc && evt.occurred_at < fc) {
+        prevTurnsBeforeCommitByRun.set(
+          evt.run_id,
+          (prevTurnsBeforeCommitByRun.get(evt.run_id) ?? 0) + 1
+        );
+      }
+    }
+
+    const prevTotalTurns = Array.from(prevTurnsByRun.values()).reduce((a, b) => a + b, 0);
+    const prevTotalCommits = Array.from(prevCommitsByRun.values()).reduce((a, b) => a + b, 0);
+    const prevTotalPrs = Array.from(prevPrsByRun.values()).reduce((a, b) => a + b, 0);
+    const prevTotalCompactions = Array.from(prevCompactionsByRun.values()).reduce((a, b) => a + b, 0);
+    const prevTotalTurnsBeforeCommit = Array.from(prevTurnsBeforeCommitByRun.values()).reduce((a, b) => a + b, 0);
+    const prevRunsWithCommits = prevTurnsBeforeCommitByRun.size;
+
+    const prevAvgTurns = prevTotalRuns > 0 ? prevTotalTurns / prevTotalRuns : 0;
+    const prevAvgTurnsBeforeCommit = prevRunsWithCommits > 0 ? prevTotalTurnsBeforeCommit / prevRunsWithCommits : 0;
+    const prevCommitsPerRun = prevTotalRuns > 0 ? prevTotalCommits / prevTotalRuns : 0;
+    const prevPrsPerRun = prevTotalRuns > 0 ? prevTotalPrs / prevTotalRuns : 0;
+    const prevCompactionsPerRun = prevTotalRuns > 0 ? prevTotalCompactions / prevTotalRuns : 0;
+
+    function pctChange(current: number, prev: number): number | null {
+      if (prev === 0) return null;
+      return round1(((current - prev) / prev) * 100);
+    }
+
     const response: AnalyticsResponse = {
       period,
       summary: {
@@ -386,6 +562,27 @@ export async function GET(request: NextRequest) {
         prs_per_run: totalRuns > 0 ? round1(totalPrs / totalRuns) : 0,
         compactions_per_run: totalRuns > 0 ? round1(totalCompactions / totalRuns) : 0,
         runs_per_day: round1(totalRuns / days),
+        total_runs_change: pctChange(totalRuns, prevTotalRuns),
+        avg_conversation_turns_change: pctChange(
+          totalRuns > 0 ? totalTurns / totalRuns : 0,
+          prevAvgTurns
+        ),
+        avg_turns_before_first_commit_change: pctChange(
+          runsWithCommits > 0 ? totalTurnsBeforeCommit / runsWithCommits : 0,
+          prevAvgTurnsBeforeCommit
+        ),
+        commits_per_run_change: pctChange(
+          totalRuns > 0 ? totalCommits / totalRuns : 0,
+          prevCommitsPerRun
+        ),
+        prs_per_run_change: pctChange(
+          totalRuns > 0 ? totalPrs / totalRuns : 0,
+          prevPrsPerRun
+        ),
+        compactions_per_run_change: pctChange(
+          totalRuns > 0 ? totalCompactions / totalRuns : 0,
+          prevCompactionsPerRun
+        ),
       },
       runs_per_day: fillDateGaps(
         runsPerDayRows.map((r) => ({

@@ -23,30 +23,43 @@ const periods: { value: AnalyticsPeriod; label: string }[] = [
 
 type RunsView = "table" | "scatter";
 
-function KpiCard({
+function KpiStat({
   title,
   value,
   loading,
+  change,
 }: {
   title: string;
   value: string;
   loading: boolean;
+  change?: number | null;
 }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">
-          {title}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {loading ? (
-          <Skeleton className="h-8 w-24" />
-        ) : (
-          <p className="text-2xl font-bold">{value}</p>
-        )}
-      </CardContent>
-    </Card>
+    <div className="space-y-1 px-6 py-4">
+      <p className="text-sm font-medium text-muted-foreground">{title}</p>
+      {loading ? (
+        <Skeleton className="h-7 w-20" />
+      ) : (
+        <div className="flex items-baseline gap-2">
+          <p className="text-xl font-bold">{value}</p>
+          {change != null && (
+            <span
+              className={cn(
+                "text-xs font-medium",
+                change > 0
+                  ? "text-green-600 dark:text-green-400"
+                  : change < 0
+                    ? "text-red-600 dark:text-red-400"
+                    : "text-muted-foreground"
+              )}
+            >
+              {change > 0 ? "+" : ""}
+              {change}%
+            </span>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -190,7 +203,6 @@ export function InsightsDashboard() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-semibold">Insights</h1>
         <div className="flex items-center gap-3">
-          {/* Developer filter */}
           {data && data.developers.length > 0 && (
             <DeveloperSelect
               developers={data.developers}
@@ -198,7 +210,6 @@ export function InsightsDashboard() {
               onChange={setDeveloperId}
             />
           )}
-          {/* Period selector */}
           <div className="flex items-center gap-1 rounded-lg border p-1">
             {periods.map((p) => (
               <button
@@ -235,54 +246,84 @@ export function InsightsDashboard() {
         </div>
       )}
 
-      {/* KPI Cards */}
+      {/* Team Insights — combined KPIs + Runs per Day */}
       {(loading || hasData) && (
         <>
-          <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
-            <KpiCard
-              title="Total Runs"
-              value={data ? data.summary.total_runs.toLocaleString() : ""}
-              loading={loading}
-            />
-            <KpiCard
-              title="Avg Conversation Turns"
-              value={
-                data ? data.summary.avg_conversation_turns.toString() : ""
-              }
-              loading={loading}
-            />
-            <KpiCard
-              title="Turns Before Commit"
-              value={
-                data
-                  ? data.summary.avg_turns_before_first_commit > 0
-                    ? data.summary.avg_turns_before_first_commit.toString()
-                    : "—"
-                  : ""
-              }
-              loading={loading}
-            />
-            <KpiCard
-              title="Commits / Run"
-              value={data ? data.summary.commits_per_run.toString() : ""}
-              loading={loading}
-            />
-            <KpiCard
-              title="PRs / Run"
-              value={data ? data.summary.prs_per_run.toString() : ""}
-              loading={loading}
-            />
-            <KpiCard
-              title="Compactions / Run"
-              value={data ? data.summary.compactions_per_run.toString() : ""}
-              loading={loading}
-            />
-          </div>
+          <Card>
+            <CardContent className="space-y-4">
+              {/* KPI stats row */}
+              <div className="-mx-6 grid grid-cols-2 divide-x border-b lg:grid-cols-3 xl:grid-cols-6">
+                <KpiStat
+                  title="Total Runs"
+                  value={data ? data.summary.total_runs.toLocaleString() : ""}
+                  loading={loading}
+                  change={data?.summary.total_runs_change}
+                />
+                <KpiStat
+                  title="Avg Turns"
+                  value={
+                    data ? data.summary.avg_conversation_turns.toString() : ""
+                  }
+                  loading={loading}
+                  change={data?.summary.avg_conversation_turns_change}
+                />
+                <KpiStat
+                  title="Turns Before Commit"
+                  value={
+                    data
+                      ? data.summary.avg_turns_before_first_commit > 0
+                        ? data.summary.avg_turns_before_first_commit.toString()
+                        : "—"
+                      : ""
+                  }
+                  loading={loading}
+                  change={data?.summary.avg_turns_before_first_commit_change}
+                />
+                <KpiStat
+                  title="Commits / Run"
+                  value={
+                    data
+                      ? `${Math.round(Math.min(data.summary.commits_per_run, 1) * 100)}%`
+                      : ""
+                  }
+                  loading={loading}
+                  change={data?.summary.commits_per_run_change}
+                />
+                <KpiStat
+                  title="PRs / Run"
+                  value={
+                    data
+                      ? `${Math.round(Math.min(data.summary.prs_per_run, 1) * 100)}%`
+                      : ""
+                  }
+                  loading={loading}
+                  change={data?.summary.prs_per_run_change}
+                />
+                <KpiStat
+                  title="Compactions / Run"
+                  value={
+                    data
+                      ? `${Math.round(Math.min(data.summary.compactions_per_run, 1) * 100)}%`
+                      : ""
+                  }
+                  loading={loading}
+                  change={data?.summary.compactions_per_run_change}
+                />
+              </div>
 
-          {/* Runs per Day - full width */}
-          <ChartCard title="Runs per Day" loading={loading}>
-            {data && <RunsTimeSeriesChart data={data.runs_per_day} />}
-          </ChartCard>
+              {/* Runs per Day chart */}
+              <div>
+                <p className="mb-2 text-sm font-medium text-muted-foreground">
+                  Runs per day
+                </p>
+                {loading ? (
+                  <Skeleton className="h-[300px] w-full" />
+                ) : (
+                  data && <RunsTimeSeriesChart data={data.runs_per_day} period={period} />
+                )}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Runs breakdown — table or scatter, with view toggle */}
           <ChartCard

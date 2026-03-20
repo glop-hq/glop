@@ -17,21 +17,18 @@ type SortKey =
 
 function InlineBar({
   value,
-  max,
   color,
 }: {
   value: number;
-  max: number;
   color: string;
 }) {
-  if (max === 0) return <span className="text-muted-foreground">0</span>;
-  const pct = (value / max) * 100;
+  const pct = Math.round(Math.min(value, 1) * 100);
   return (
     <div className="flex items-center gap-2">
-      <span className="w-8 shrink-0 tabular-nums text-sm">{value.toFixed(1)}</span>
+      <span className="w-8 shrink-0 tabular-nums text-sm">{pct}%</span>
       <div className="h-2 flex-1 rounded-full bg-muted">
         <div
-          className="h-full rounded-full"
+          className="h-full rounded-full transition-all"
           style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
@@ -43,15 +40,6 @@ export function DeveloperStatsTable({ data }: { data: DeveloperStats[] }) {
   const [sortKey, setSortKey] = useState<SortKey>("developer_name");
   const [sortAsc, setSortAsc] = useState(true);
   const [page, setPage] = useState(0);
-
-  const maxes = useMemo(
-    () => ({
-      commits_per_run: Math.max(...data.map((d) => d.commits_per_run), 0.1),
-      prs_per_run: Math.max(...data.map((d) => d.prs_per_run), 0.1),
-      compactions_per_run: Math.max(...data.map((d) => d.compactions_per_run), 0.1),
-    }),
-    [data]
-  );
 
   const sorted = useMemo(() => {
     const arr = [...data];
@@ -167,21 +155,18 @@ export function DeveloperStatsTable({ data }: { data: DeveloperStats[] }) {
                 <td className="py-2 pr-8">
                   <InlineBar
                     value={dev.commits_per_run}
-                    max={maxes.commits_per_run}
                     color="var(--chart-2)"
                   />
                 </td>
                 <td className="py-2 pr-8">
                   <InlineBar
                     value={dev.prs_per_run}
-                    max={maxes.prs_per_run}
                     color="var(--chart-2)"
                   />
                 </td>
                 <td className="py-2 pr-8">
                   <InlineBar
                     value={dev.compactions_per_run}
-                    max={maxes.compactions_per_run}
                     color="var(--chart-5)"
                   />
                 </td>

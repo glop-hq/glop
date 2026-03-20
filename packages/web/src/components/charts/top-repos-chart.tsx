@@ -48,15 +48,7 @@ export function TopReposChart({ data }: { data: TopRepo[] }) {
           horizontal={false}
           strokeOpacity={0.5}
         />
-        <XAxis
-          type="number"
-          allowDecimals={false}
-          tick={{ fontSize: 12 }}
-          className="text-muted-foreground"
-          axisLine={false}
-          tickLine={false}
-          tickMargin={8}
-        />
+        <XAxis type="number" hide />
         <YAxis
           type="category"
           dataKey="label"
@@ -78,7 +70,7 @@ export function TopReposChart({ data }: { data: TopRepo[] }) {
               "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
         />
-        <Bar dataKey="run_count" fill="var(--chart-4)" name="Runs" radius={[0, 6, 6, 0]} />
+        <Bar dataKey="run_count" fill="var(--chart-4)" name="Runs" radius={[0, 8, 8, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

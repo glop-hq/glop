@@ -66,7 +66,7 @@ export function ActivityBreakdownChart({
               "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)",
           }}
         />
-        <Bar dataKey="count" fill="var(--chart-3)" name="Runs" radius={[0, 6, 6, 0]} />
+        <Bar dataKey="count" fill="var(--chart-3)" name="Runs" radius={[0, 8, 8, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

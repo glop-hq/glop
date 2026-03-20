@@ -76,25 +76,25 @@ export function RunBreakdownChart({ data }: { data: RunBreakdown[] }) {
           dataKey="conversation_turns"
           fill="var(--chart-1)"
           name="Turns"
-          radius={[0, 6, 6, 0]}
+          radius={[0, 8, 8, 0]}
         />
         <Bar
           dataKey="commits"
           fill="var(--chart-2)"
           name="Commits"
-          radius={[0, 6, 6, 0]}
+          radius={[0, 8, 8, 0]}
         />
         <Bar
           dataKey="prs"
           fill="var(--chart-3)"
           name="PRs"
-          radius={[0, 6, 6, 0]}
+          radius={[0, 8, 8, 0]}
         />
         <Bar
           dataKey="compactions"
           fill="var(--chart-5)"
           name="Compactions"
-          radius={[0, 6, 6, 0]}
+          radius={[0, 8, 8, 0]}
         />
       </BarChart>
     </ResponsiveContainer>
