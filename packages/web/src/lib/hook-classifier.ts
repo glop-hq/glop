@@ -94,6 +94,22 @@ export function classifyHookPayload(
 ): ClassifiedHook {
   // UserPromptSubmit — developer typed something
   if (hookType === "UserPromptSubmit") {
+    const prompt = typeof payload.prompt === "string" ? payload.prompt : undefined;
+
+    // System-injected messages (e.g. background task killed on /exit) are not
+    // real developer prompts — suppress them so they don't appear in the feed.
+    if (prompt && /^\s*<task-notification[\s>]/i.test(prompt)) {
+      return {
+        activity_kind: "unknown",
+        phase: "editing",
+        action_label: "Task notification",
+        files_touched: [],
+        is_completion: false,
+        is_session_start: false,
+        content_type: "heartbeat",
+      };
+    }
+
     return {
       activity_kind: "editing",
       phase: "waiting",
@@ -102,7 +118,7 @@ export function classifyHookPayload(
       is_completion: false,
       is_session_start: false,
       content_type: "prompt",
-      content: typeof payload.prompt === "string" ? payload.prompt : undefined,
+      content: prompt,
     };
   }
 

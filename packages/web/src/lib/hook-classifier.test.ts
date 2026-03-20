@@ -14,6 +14,14 @@ describe("classifyHookPayload", () => {
       expect(result.is_completion).toBe(false);
     });
 
+    it("suppresses task-notification messages as heartbeat", () => {
+      const result = classifyHookPayload("UserPromptSubmit", {
+        prompt: `<task-notification> <task-id>b6ad9ab</task-id> <tool-use-id>toolu_01EDX3r1vW41kXzxLx9y9mq8</tool-use-id> <output-file>/private/tmp/claude-501/tasks/b6ad9ab.output</output-file> <status>killed</status> <summary>Background command "Start the dev server" was stopped</summary> </task-notification>\nRead the output file to retrieve the result: /private/tmp/claude-501/tasks/b6ad9ab.output`,
+      });
+      expect(result.content_type).toBe("heartbeat");
+      expect(result.content).toBeUndefined();
+    });
+
     it("classifies SessionStart", () => {
       const result = classifyHookPayload("SessionStart", {});
       expect(result.content_type).toBe("session_start");
