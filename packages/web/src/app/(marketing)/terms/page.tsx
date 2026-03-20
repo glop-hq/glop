@@ -8,8 +8,8 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold text-foreground">1. Acceptance of Terms</h2>
           <p>
-            By accessing or using Glop (&quot;the Service&quot;), you agree to be bound by these Terms of Service.
-            If you do not agree, do not use the Service.
+            By using Glop (&quot;the Service&quot;), you agree to these Terms of Service.
+            If you don&apos;t agree with them, please don&apos;t use the Service.
           </p>
         </section>
 
@@ -24,8 +24,8 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold text-foreground">3. User Accounts</h2>
           <p>
-            You are responsible for maintaining the security of your account and any activity that occurs under it.
-            You must provide accurate information when creating an account.
+            When you create an account, please keep your credentials secure and provide accurate information.
+            You&apos;re responsible for activity that happens under your account.
           </p>
         </section>
 
@@ -48,8 +48,8 @@ export default function TermsPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold text-foreground">6. Termination</h2>
           <p>
-            We may suspend or terminate your access to the Service at any time, with or without cause.
-            You may stop using the Service at any time.
+            Either of us can end this relationship at any time. You can stop using Glop whenever you like,
+            and we may suspend or close accounts if needed.
           </p>
         </section>
 

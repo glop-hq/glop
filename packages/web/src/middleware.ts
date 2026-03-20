@@ -11,6 +11,8 @@ const publicPaths = [
   "/api/auth",
   "/shared",
   "/runs",
+  "/terms",
+  "/privacy",
 ];
 
 const protectedApiPaths = [

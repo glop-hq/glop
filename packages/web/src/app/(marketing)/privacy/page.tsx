@@ -35,8 +35,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-2 text-base font-semibold text-foreground">4. Data Security</h2>
           <p>
-            We take reasonable measures to protect your information. However, no method of transmission
-            over the internet or electronic storage is completely secure.
+            We take security seriously and use industry-standard measures to protect your information.
           </p>
         </section>
 

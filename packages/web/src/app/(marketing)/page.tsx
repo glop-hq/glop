@@ -150,7 +150,7 @@ export default function LandingPage() {
             and how to do more of it.
           </p>
 
-          <div className="mt-14 grid gap-10 sm:grid-cols-3 sm:gap-8">
+          <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 sm:gap-8">
             <ValueProp
               icon={Eye}
               title="Get up to speed"
@@ -165,6 +165,11 @@ export default function LandingPage() {
               icon={Shield}
               title="Ship with confidence"
               description="Full trail of every AI action, tool call, and artifact. Review what AI did before it goes to production."
+            />
+            <ValueProp
+              icon={Github}
+              title="Fully open source"
+              description="No vendor lock-in. Self-host on your own infrastructure, audit every line of code, and contribute back to the project."
             />
           </div>
         </div>
@@ -185,7 +190,7 @@ export default function LandingPage() {
             <div className="flex flex-col gap-0">
               <Step number={1} title="Auth" command="glop login" description="Links your CLI to your Glop workspace." isLast={false} />
               <Step number={2} title="Link" command="glop link" description="Installs hooks in your repo in seconds." isLast={false} />
-              <Step number={3} title="Start coding" command="claude" description="Sessions stream to your board." isLast={true} />
+              <Step number={3} title="Code" command="claude" description="Sessions stream to your board." isLast={true} />
             </div>
             {/* Right: terminal */}
             <div className="overflow-hidden rounded-xl border border-zinc-800 bg-zinc-950">
