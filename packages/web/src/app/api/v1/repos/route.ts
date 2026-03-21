@@ -22,19 +22,14 @@ export async function GET(request: NextRequest) {
 
     const db = getDb();
 
-    // Subquery for latest scan per repo
-    const latestScan = db
-      .select({
-        repo_id: schema.repo_scans.repo_id,
-        score: schema.repo_scans.score,
-        status: schema.repo_scans.status,
-        completed_at: schema.repo_scans.completed_at,
-        scan_id: schema.repo_scans.id,
-      })
-      .from(schema.repo_scans)
-      .where(eq(schema.repo_scans.workspace_id, workspaceId))
-      .orderBy(desc(schema.repo_scans.created_at))
-      .as("latest_scan");
+    // Use correlated subqueries for latest scan data — avoids duplicate rows
+    // from joining a multi-row scan table. The (repo_id, created_at) index
+    // keeps these efficient.
+    const latestScanId = sql`(
+      select id from repo_scans
+      where repo_id = ${schema.repos.id}
+      order by created_at desc limit 1
+    )`;
 
     const repos = await db
       .select({
@@ -51,63 +46,39 @@ export async function GET(request: NextRequest) {
         created_at: schema.repos.created_at,
         updated_at: schema.repos.updated_at,
         run_count: sql<number>`count(distinct ${schema.runs.id})::int`,
-        latest_scan_score: latestScan.score,
-        latest_scan_status: latestScan.status,
-        latest_scan_at: latestScan.completed_at,
+        latest_scan_score: sql<number | null>`(
+          select score from repo_scans
+          where repo_id = ${schema.repos.id}
+          order by created_at desc limit 1
+        )`,
+        latest_scan_status: sql<string | null>`(
+          select status::text from repo_scans
+          where repo_id = ${schema.repos.id}
+          order by created_at desc limit 1
+        )`,
+        latest_scan_at: sql<string | null>`(
+          select completed_at from repo_scans
+          where repo_id = ${schema.repos.id}
+          order by created_at desc limit 1
+        )`,
+        critical_count: sql<number>`coalesce((
+          select count(*) from repo_scan_checks
+          where scan_id = ${latestScanId}
+          and severity = 'critical' and status != 'pass'
+        ), 0)::int`,
+        warning_count: sql<number>`coalesce((
+          select count(*) from repo_scan_checks
+          where scan_id = ${latestScanId}
+          and severity = 'warning' and status != 'pass'
+        ), 0)::int`,
       })
       .from(schema.repos)
       .leftJoin(schema.runs, eq(schema.runs.repo_id, schema.repos.id))
-      .leftJoin(
-        latestScan,
-        sql`${latestScan.repo_id} = ${schema.repos.id} AND ${latestScan.completed_at} = ${schema.repos.last_scanned_at}`
-      )
       .where(eq(schema.repos.workspace_id, workspaceId))
-      .groupBy(
-        schema.repos.id,
-        latestScan.score,
-        latestScan.status,
-        latestScan.completed_at
-      )
+      .groupBy(schema.repos.id)
       .orderBy(desc(schema.repos.last_active_at));
 
-    // Fetch critical/warning counts for repos that have scans
-    const repoIds = repos.filter((r) => r.latest_scan_at).map((r) => r.id);
-    let findingCounts: Record<string, { critical_count: number; warning_count: number }> = {};
-
-    if (repoIds.length > 0) {
-      const counts = await db
-        .select({
-          repo_id: schema.repo_scans.repo_id,
-          critical_count: sql<number>`count(*) filter (where ${schema.repo_scan_checks.severity} = 'critical' and ${schema.repo_scan_checks.status} != 'pass')::int`,
-          warning_count: sql<number>`count(*) filter (where ${schema.repo_scan_checks.severity} = 'warning' and ${schema.repo_scan_checks.status} != 'pass')::int`,
-        })
-        .from(schema.repo_scans)
-        .innerJoin(
-          schema.repo_scan_checks,
-          eq(schema.repo_scan_checks.scan_id, schema.repo_scans.id)
-        )
-        .where(
-          sql`${schema.repo_scans.completed_at} = (
-            select max(rs2.completed_at) from repo_scans rs2 where rs2.repo_id = ${schema.repo_scans.repo_id}
-          )`
-        )
-        .groupBy(schema.repo_scans.repo_id);
-
-      for (const c of counts) {
-        findingCounts[c.repo_id] = {
-          critical_count: c.critical_count,
-          warning_count: c.warning_count,
-        };
-      }
-    }
-
-    const data = repos.map((r) => ({
-      ...r,
-      critical_count: findingCounts[r.id]?.critical_count ?? 0,
-      warning_count: findingCounts[r.id]?.warning_count ?? 0,
-    }));
-
-    return NextResponse.json({ data });
+    return NextResponse.json({ data: repos });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(

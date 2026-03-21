@@ -25,6 +25,7 @@ export interface Repo {
   language: string | null;
   first_seen_at: string;
   last_active_at: string;
+  last_scanned_at: string | null;
   created_at: string;
   updated_at: string;
 }

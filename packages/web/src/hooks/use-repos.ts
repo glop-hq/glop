@@ -9,6 +9,7 @@ export function useRepos(workspaceId: string) {
   const [error, setError] = useState<string | null>(null);
 
   const fetchRepos = useCallback(async () => {
+    if (!workspaceId) return;
     try {
       const res = await fetch(`/api/v1/repos?workspace_id=${workspaceId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
