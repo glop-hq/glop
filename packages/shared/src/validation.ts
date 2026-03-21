@@ -170,3 +170,26 @@ export const repoUpdateSchema = z.object({
   default_branch: z.string().max(100).optional(),
   language: z.string().max(50).optional(),
 });
+
+export const scanCheckResultSchema = z.object({
+  check_id: z.string(),
+  status: z.enum(["pass", "warn", "fail", "skip"]),
+  severity: z.enum(["critical", "warning", "info"]),
+  weight: z.number().int().min(0).max(100),
+  score: z.number().int().min(0).max(100),
+  title: z.string(),
+  description: z.string(),
+  recommendation: z.string().nullable().optional(),
+  fix_available: z.boolean().default(false),
+  details: z.record(z.unknown()).default({}),
+});
+
+export const scanResultSchema = z.object({
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  score: z.number().int().min(0).max(100),
+  checks: z.array(scanCheckResultSchema).min(1),
+  started_at: z.string(),
+  completed_at: z.string(),
+  error_message: z.string().nullable().optional(),
+});

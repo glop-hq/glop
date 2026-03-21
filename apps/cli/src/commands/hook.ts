@@ -4,7 +4,7 @@ import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
-import { getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
+import { getRepoRoot, getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 
 const PR_URL_RE = /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/;
 
@@ -136,6 +136,41 @@ export const hookCommand = new Command("__hook")
           console.log("glop: API key expired or invalid — run `glop login` to re-authenticate");
         } else {
           console.log(`glop: server returned HTTP ${res.status}`);
+        }
+      }
+
+      // Spawn background scan worker on SessionStart if scan is stale (>24h)
+      if (payload.hook_event_name === "SessionStart" && res.ok) {
+        try {
+          const repoKey = payload.repo_key as string;
+          const scanStatusRes = await fetch(
+            `${config.server_url}/api/v1/repos/scan-status?workspace_id=${repoConfig.workspace_id}&repo_key=${encodeURIComponent(repoKey)}`,
+            {
+              headers: { Authorization: `Bearer ${config.api_key}` },
+              signal: AbortSignal.timeout(3000),
+            }
+          );
+          if (scanStatusRes.ok) {
+            const scanStatus = (await scanStatusRes.json()) as { needs_scan: boolean };
+            if (scanStatus.needs_scan) {
+              const repoRoot = getRepoRoot();
+              if (repoRoot) {
+                const scanWorkerPath = path.join(
+                  path.dirname(fileURLToPath(import.meta.url)),
+                  "lib",
+                  "scan-worker.js"
+                );
+                const child = spawn(
+                  process.execPath,
+                  [scanWorkerPath, config.server_url, repoConfig.workspace_id, repoRoot, repoKey],
+                  { detached: true, stdio: "ignore", env: { ...process.env, GLOP_API_KEY: config.api_key } }
+                );
+                child.unref();
+              }
+            }
+          }
+        } catch {
+          // Silently ignore — scan is best-effort
         }
       }
 

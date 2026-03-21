@@ -1,14 +1,15 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { RepoWithStats } from "@glop/shared";
+import type { RepoWithScanStats } from "@glop/shared";
 
 export function useRepos(workspaceId: string) {
-  const [repos, setRepos] = useState<RepoWithStats[]>([]);
+  const [repos, setRepos] = useState<RepoWithScanStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchRepos = useCallback(async () => {
+    if (!workspaceId) return;
     try {
       const res = await fetch(`/api/v1/repos?workspace_id=${workspaceId}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
