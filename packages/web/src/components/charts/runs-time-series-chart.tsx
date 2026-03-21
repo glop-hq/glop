@@ -114,7 +114,8 @@ export function RunsTimeSeriesChart({
         />
         <Bar
           dataKey="total"
-          fill="var(--chart-2)"
+          fill="var(--foreground)"
+          fillOpacity={0.15}
           radius={[8, 8, 0, 0]}
           name="Runs"
         />

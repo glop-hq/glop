@@ -42,15 +42,21 @@ function RepoName({ repoKey }: { repoKey: string }) {
   );
 }
 
+function formatCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
 function InlineBar({ value, max }: { value: number; max: number }) {
   if (max === 0) return <span className="text-muted-foreground">0</span>;
   const pct = (value / max) * 100;
   return (
     <div className="flex items-center gap-2">
-      <span className="w-6 text-right tabular-nums text-sm">{value}</span>
+      <span className="w-8 text-right tabular-nums text-sm" title={value.toLocaleString()}>{formatCompact(value)}</span>
       <div className="h-2 flex-1 rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-foreground/25"
+          className="h-full rounded-full bg-foreground/15"
           style={{ width: `${pct}%` }}
         />
       </div>
