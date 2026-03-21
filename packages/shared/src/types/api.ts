@@ -70,6 +70,7 @@ export interface WorkspaceResponse {
   created_by: string | null;
   created_at: string;
   updated_at: string;
+  default_run_visibility: "private" | "workspace";
 }
 
 export interface MemberResponse {
