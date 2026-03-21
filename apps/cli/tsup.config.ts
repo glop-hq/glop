@@ -15,10 +15,10 @@ export default defineConfig([
     define,
   },
   {
-    entry: ["src/lib/pr-comment-worker.ts"],
+    entry: ["src/lib/pr-comment-worker.ts", "src/lib/scan-worker.ts"],
     format: ["esm"],
     dts: false,
-    clean: true,
+    clean: false,
     outDir: "dist/lib",
     define,
   },
