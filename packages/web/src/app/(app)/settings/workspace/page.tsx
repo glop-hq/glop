@@ -5,10 +5,12 @@ import { useSession } from "next-auth/react";
 import { useWorkspaceMembers } from "@/hooks/use-workspace-members";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useInviteLink } from "@/hooks/use-invite-link";
+import { useDevelopers } from "@/hooks/use-developers";
+import { useRepos } from "@/hooks/use-repos";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings, Eye, Lock } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings, Eye, Lock, Users, GitBranch } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
@@ -53,6 +55,8 @@ export default function WorkspaceSettingsPage() {
       {workspace.role === "admin" && (
         <InviteLinkSection workspaceId={workspace.id} />
       )}
+      <DevelopersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} />
+      <ReposSection workspaceId={workspace.id} />
     </main>
   );
 }
@@ -645,6 +649,244 @@ function InviteLinkSection({ workspaceId }: { workspaceId: string }) {
           </div>
         )}
         {error && <p className="text-xs text-destructive">{error}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DevelopersSection({
+  workspaceId,
+  isAdmin,
+}: {
+  workspaceId: string;
+  isAdmin: boolean;
+}) {
+  const { developers, loading, error, mergeDevelopers } =
+    useDevelopers(workspaceId);
+  const [mergeSource, setMergeSource] = useState<string | null>(null);
+  const [merging, setMerging] = useState(false);
+
+  const handleMerge = async (targetId: string) => {
+    if (!mergeSource || mergeSource === targetId) return;
+    if (!confirm("Merge these two developer identities? This cannot be undone."))
+      return;
+    setMerging(true);
+    try {
+      await mergeDevelopers(mergeSource, targetId);
+      setMergeSource(null);
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to merge");
+    } finally {
+      setMerging(false);
+    }
+  };
+
+  const formatRelativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const hours = Math.floor(diff / 3600000);
+    if (hours < 1) return "just now";
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return `${Math.floor(days / 30)}mo ago`;
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Users className="h-4 w-4" />
+            Developers
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-muted-foreground text-sm">
+          Failed to load developers: {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Users className="h-4 w-4" />
+          Developers ({developers.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-muted-foreground mb-3">
+          CLI identities detected from session data.
+        </p>
+        {developers.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No developers detected yet. Developers appear here automatically when
+            they use Claude Code with Glop.
+          </p>
+        ) : (
+          <div className="divide-y">
+            {developers.map((dev) => (
+              <div
+                key={dev.id}
+                className={`flex items-center justify-between py-3 ${
+                  mergeSource && mergeSource !== dev.id
+                    ? "cursor-pointer hover:bg-muted/50 rounded px-2 -mx-2"
+                    : ""
+                }`}
+                onClick={() => {
+                  if (mergeSource && mergeSource !== dev.id) {
+                    handleMerge(dev.id);
+                  }
+                }}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-secondary text-xs font-medium">
+                    {(dev.display_name || dev.email || "D")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium">
+                      {dev.display_name || dev.email || "Unknown"}
+                    </p>
+                    {dev.email && dev.display_name && (
+                      <p className="text-xs text-muted-foreground">
+                        {dev.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{dev.run_count} sessions</span>
+                  <span>{formatRelativeTime(dev.last_active_at)}</span>
+                  {isAdmin && (
+                    <Button
+                      variant={mergeSource === dev.id ? "default" : "ghost"}
+                      size="sm"
+                      className="cursor-pointer h-7 text-xs"
+                      disabled={merging}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setMergeSource(
+                          mergeSource === dev.id ? null : dev.id
+                        );
+                      }}
+                    >
+                      {mergeSource === dev.id ? "Cancel" : "Merge"}
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+        {mergeSource && (
+          <p className="text-xs text-amber-600 mt-2">
+            Click another developer to merge into the selected one.
+          </p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReposSection({ workspaceId }: { workspaceId: string }) {
+  const { repos, loading, error } = useRepos(workspaceId);
+
+  const formatRelativeTime = (dateStr: string) => {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const hours = Math.floor(diff / 3600000);
+    if (hours < 1) return "just now";
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return `${Math.floor(days / 30)}mo ago`;
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            Repositories
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-full" />
+          ))}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="p-6 text-muted-foreground text-sm">
+          Failed to load repositories: {error}
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <GitBranch className="h-4 w-4" />
+          Repositories ({repos.length})
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-xs text-muted-foreground mb-3">
+          Repositories detected from Claude Code sessions.
+        </p>
+        {repos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No repositories detected yet. Repos appear here automatically when
+            developers use Claude Code.
+          </p>
+        ) : (
+          <div className="divide-y">
+            {repos.map((repo) => (
+              <div
+                key={repo.id}
+                className="flex items-center justify-between py-3"
+              >
+                <div>
+                  <p className="text-sm font-medium font-mono">
+                    {repo.repo_key}
+                  </p>
+                  {repo.display_name &&
+                    repo.display_name !== repo.repo_key && (
+                      <p className="text-xs text-muted-foreground">
+                        {repo.display_name}
+                      </p>
+                    )}
+                </div>
+                <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                  <span>{repo.run_count} sessions</span>
+                  <span>{formatRelativeTime(repo.last_active_at)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );

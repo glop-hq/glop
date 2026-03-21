@@ -9,6 +9,7 @@ import {
 } from "@glop/shared";
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
 import { extractBashOutput, extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
+import { resolveOrCreateDeveloper, resolveOrCreateRepo } from "./entity-resolver";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -119,6 +120,22 @@ export async function processHook(
 
   const needsNewRun = shouldCreateNewRun(existingRun as Run | null, matchedBySessionId);
 
+  // Completion event with no open run — skip entity resolution and bail
+  if (!needsNewRun && !existingRun) {
+    return { run_id: "", event_id: "" };
+  }
+
+  // Resolve entity records in parallel
+  const [developerEntityId, repoId] = await Promise.all([
+    resolveOrCreateDeveloper(db, ctx.workspace_id, {
+      developer_id: ctx.developer_id,
+      developer_name: ctx.developer_name,
+      git_user_email: ctx.git_user_email,
+      git_user_name: ctx.git_user_name,
+    }, now),
+    resolveOrCreateRepo(db, ctx.workspace_id, ctx.repo_key, now),
+  ]);
+
   let runId: string;
 
   if (needsNewRun && !classified.is_completion) {
@@ -137,6 +154,8 @@ export async function processHook(
       workspace_id: ctx.workspace_id,
       visibility: ws?.default_run_visibility ?? "workspace",
       owner_user_id: ctx.user_id || null,
+      developer_entity_id: developerEntityId,
+      repo_id: repoId,
       developer_id: ctx.developer_id,
       machine_id: ctx.machine_id,
       repo_key: ctx.repo_key,
@@ -197,6 +216,14 @@ export async function processHook(
       }
     }
 
+    // Backfill entity FKs on existing runs that predate this feature
+    if (!existingRun.developer_entity_id && developerEntityId) {
+      updateData.developer_entity_id = developerEntityId;
+    }
+    if (!existingRun.repo_id && repoId) {
+      updateData.repo_id = repoId;
+    }
+
     // Store slug on the run if it doesn't have one yet
     if (ctx.slug && !existingRun.slug) {
       updateData.slug = ctx.slug;
@@ -225,7 +252,7 @@ export async function processHook(
         .where(eq(schema.runs.id, runId));
     }
   } else {
-    // Completion event with no open run — ignore gracefully
+    // Should not reach here — guarded by early return above
     return { run_id: "", event_id: "" };
   }
 

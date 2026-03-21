@@ -9,7 +9,8 @@
   },
   "scripts": {
     "generate": "drizzle-kit generate",
-    "migrate": "tsx src/migrate.ts"
+    "migrate": "tsx src/migrate.ts",
+    "backfill": "tsx src/backfill-entities.ts"
   },
   "dependencies": {
     "@glop/shared": "workspace:*",
