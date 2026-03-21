@@ -150,6 +150,7 @@ export async function GET(request: NextRequest) {
       activityRows,
       busiestHoursRows,
       developersRows,
+      allRunRows,
       prevSummaryRows,
       prevTurnsPerRunRows,
       prevArtifactRows,
@@ -348,6 +349,17 @@ export async function GET(request: NextRequest) {
         )
         .groupBy(schema.runs.owner_user_id, schema.users.name, schema.users.email, schema.users.avatar_url)
         .orderBy(sql`coalesce(${schema.users.name}, ${schema.users.email})`),
+
+      // 12. All runs for developer stats (no limit)
+      db
+        .select({
+          run_id: schema.runs.id,
+          developer_name: sql<string>`coalesce(${schema.users.name}, ${schema.users.email})`,
+          developer_avatar_url: schema.users.avatar_url,
+        })
+        .from(schema.runs)
+        .innerJoin(schema.users, eq(schema.runs.owner_user_id, schema.users.id))
+        .where(baseFilter),
 
       // --- Previous period queries for % change ---
 
@@ -644,7 +656,7 @@ export async function GET(request: NextRequest) {
         }
       >();
 
-      for (const row of recentRunRows) {
+      for (const row of allRunRows) {
         const entry = devMap.get(row.developer_name) ?? {
           avatar_url: row.developer_avatar_url,
           runs: 0,
