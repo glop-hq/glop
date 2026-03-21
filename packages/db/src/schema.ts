@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   pgTable,
   pgEnum,
@@ -160,6 +161,79 @@ export const workspace_members = pgTable(
   ]
 );
 
+export const developers = pgTable(
+  "developers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    display_name: text("display_name"),
+    email: text("email"),
+    identity_keys: jsonb("identity_keys")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    avatar_url: text("avatar_url"),
+    first_seen_at: timestamp("first_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_active_at: timestamp("last_active_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("developers_workspace_id_idx").on(table.workspace_id),
+    uniqueIndex("developers_workspace_email_idx")
+      .on(table.workspace_id, table.email)
+      .where(sql`email IS NOT NULL`),
+  ]
+);
+
+export const repos = pgTable(
+  "repos",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    repo_key: text("repo_key").notNull(),
+    display_name: text("display_name"),
+    description: text("description"),
+    default_branch: text("default_branch"),
+    language: text("language"),
+    first_seen_at: timestamp("first_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_active_at: timestamp("last_active_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("repos_workspace_id_idx").on(table.workspace_id),
+    uniqueIndex("repos_workspace_repo_key_idx").on(
+      table.workspace_id,
+      table.repo_key
+    ),
+  ]
+);
+
 export const runs = pgTable(
   "runs",
   {
@@ -168,6 +242,10 @@ export const runs = pgTable(
       .notNull()
       .references(() => workspaces.id),
     owner_user_id: uuid("owner_user_id").references(() => users.id),
+    developer_entity_id: uuid("developer_entity_id").references(
+      () => developers.id
+    ),
+    repo_id: uuid("repo_id").references(() => repos.id),
     developer_id: text("developer_id").notNull(),
     machine_id: text("machine_id").notNull(),
     repo_key: text("repo_key").notNull(),
@@ -242,6 +320,8 @@ export const runs = pgTable(
     index("runs_owner_user_id_idx").on(table.owner_user_id),
     index("runs_visibility_idx").on(table.visibility),
     index("runs_parent_run_id_idx").on(table.parent_run_id),
+    index("runs_developer_entity_id_idx").on(table.developer_entity_id),
+    index("runs_repo_id_idx").on(table.repo_id),
   ]
 );
 

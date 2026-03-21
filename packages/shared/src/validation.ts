@@ -153,3 +153,20 @@ export const analyticsQuerySchema = z.object({
   period: analyticsPeriodSchema.default("7d"),
   user_id: z.string().uuid().optional(),
 });
+
+export const developerUpdateSchema = z.object({
+  display_name: z.string().min(1).max(100).optional(),
+  email: z.string().email().optional(),
+});
+
+export const developerMergeSchema = z.object({
+  source_id: z.string().uuid(),
+  target_id: z.string().uuid(),
+});
+
+export const repoUpdateSchema = z.object({
+  display_name: z.string().min(1).max(200).optional(),
+  description: z.string().max(1000).optional(),
+  default_branch: z.string().max(100).optional(),
+  language: z.string().max(50).optional(),
+});
