@@ -124,9 +124,18 @@ export async function processHook(
   if (needsNewRun && !classified.is_completion) {
     // Create new run
     runId = generateId();
+
+    // Look up workspace default visibility
+    const [ws] = await db
+      .select({ default_run_visibility: schema.workspaces.default_run_visibility })
+      .from(schema.workspaces)
+      .where(eq(schema.workspaces.id, ctx.workspace_id))
+      .limit(1);
+
     await db.insert(schema.runs).values({
       id: runId,
       workspace_id: ctx.workspace_id,
+      visibility: ws?.default_run_visibility ?? "workspace",
       owner_user_id: ctx.user_id || null,
       developer_id: ctx.developer_id,
       machine_id: ctx.machine_id,

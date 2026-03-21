@@ -118,6 +118,7 @@ export const workspaceCreateRequestSchema = z.object({
 
 export const workspaceUpdateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
+  default_run_visibility: runVisibilitySchema.optional(),
 });
 
 export const memberInviteSchema = z.object({

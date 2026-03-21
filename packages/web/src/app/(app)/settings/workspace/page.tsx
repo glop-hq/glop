@@ -8,7 +8,7 @@ import { useInviteLink } from "@/hooks/use-invite-link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings } from "lucide-react";
+import { UserPlus, Trash2, Shield, ShieldCheck, Loader2, Link2, Copy, Check, X, Send, Settings, Eye, Lock } from "lucide-react";
 import type { SessionWorkspace } from "@/lib/session";
 
 export default function WorkspaceSettingsPage() {
@@ -39,6 +39,13 @@ export default function WorkspaceSettingsPage() {
         <GeneralSection
           workspaceId={workspace.id}
           workspaceName={workspaceDetail?.name || ""}
+          onSaved={refetchWorkspaces}
+        />
+      )}
+      {workspace.role === "admin" && (
+        <DefaultVisibilitySection
+          workspaceId={workspace.id}
+          defaultRunVisibility={workspaceDetail?.default_run_visibility ?? "workspace"}
           onSaved={refetchWorkspaces}
         />
       )}
@@ -135,6 +142,88 @@ function GeneralSection({
           </Button>
         </form>
         {error && <p className="text-xs text-destructive mt-2">{error}</p>}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DefaultVisibilitySection({
+  workspaceId,
+  defaultRunVisibility,
+  onSaved,
+}: {
+  workspaceId: string;
+  defaultRunVisibility: "private" | "workspace";
+  onSaved: () => void;
+}) {
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = async (value: "private" | "workspace") => {
+    if (value === defaultRunVisibility) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/v1/workspaces/${workspaceId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ default_run_visibility: value }),
+      });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to update");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2">
+          <Eye className="h-4 w-4" />
+          Default Run Visibility
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <p className="text-xs text-muted-foreground">
+          Choose whether new runs are visible to the whole workspace or private by default.
+          Individual members can still change visibility on their own runs.
+        </p>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => handleChange("workspace")}
+            disabled={saving}
+            className={`cursor-pointer flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+              defaultRunVisibility === "workspace"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            <Eye className="h-4 w-4" />
+            Workspace
+          </button>
+          <button
+            type="button"
+            onClick={() => handleChange("private")}
+            disabled={saving}
+            className={`cursor-pointer flex items-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+              defaultRunVisibility === "private"
+                ? "border-primary bg-primary/10 text-primary"
+                : "border-border text-muted-foreground hover:border-foreground/30"
+            }`}
+          >
+            <Lock className="h-4 w-4" />
+            Private
+          </button>
+          {saving && <Loader2 className="h-4 w-4 animate-spin self-center text-muted-foreground" />}
+        </div>
+        {error && <p className="text-xs text-destructive">{error}</p>}
       </CardContent>
     </Card>
   );

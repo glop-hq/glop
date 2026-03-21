@@ -134,6 +134,7 @@ export const workspaces = pgTable("workspaces", {
   updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
     .notNull()
     .defaultNow(),
+  default_run_visibility: runVisibilityEnum("default_run_visibility").notNull().default("workspace"),
 });
 
 export const workspace_members = pgTable(
