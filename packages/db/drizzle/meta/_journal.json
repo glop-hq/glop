@@ -50,6 +50,13 @@
       "when": 1774108644703,
       "tag": "0006_windy_ezekiel",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1774112376782,
+      "tag": "0007_glamorous_excalibur",
+      "breakpoints": true
     }
   ]
 }

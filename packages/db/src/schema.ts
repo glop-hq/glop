@@ -98,6 +98,25 @@ export const accessRequestStatusEnum = pgEnum("access_request_status", [
   "pending",
 ]);
 
+export const scanStatusEnum = pgEnum("scan_status", [
+  "pending",
+  "completed",
+  "error",
+]);
+
+export const checkStatusEnum = pgEnum("check_status", [
+  "pass",
+  "warn",
+  "fail",
+  "skip",
+]);
+
+export const scanSeverityEnum = pgEnum("scan_severity", [
+  "critical",
+  "warning",
+  "info",
+]);
+
 // ── Tables ─────────────────────────────────────────────
 
 export const users = pgTable(
@@ -218,6 +237,10 @@ export const repos = pgTable(
       mode: "string",
       withTimezone: true,
     }).notNull(),
+    last_scanned_at: timestamp("last_scanned_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
     created_at: timestamp("created_at", { mode: "string", withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -462,6 +485,65 @@ export const access_requests = pgTable(
     ),
     index("access_requests_owner_user_id_idx").on(table.owner_user_id),
   ]
+);
+
+export const repo_scans = pgTable(
+  "repo_scans",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    score: integer("score"),
+    status: scanStatusEnum("status").notNull().default("pending"),
+    triggered_by: text("triggered_by").notNull(),
+    error_message: text("error_message"),
+    started_at: timestamp("started_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    completed_at: timestamp("completed_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("repo_scans_repo_id_idx").on(table.repo_id),
+    index("repo_scans_repo_id_created_at_idx").on(
+      table.repo_id,
+      table.created_at
+    ),
+  ]
+);
+
+export const repo_scan_checks = pgTable(
+  "repo_scan_checks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    scan_id: uuid("scan_id")
+      .notNull()
+      .references(() => repo_scans.id, { onDelete: "cascade" }),
+    check_id: text("check_id").notNull(),
+    status: checkStatusEnum("status").notNull(),
+    severity: scanSeverityEnum("severity").notNull(),
+    weight: integer("weight").notNull(),
+    score: integer("score").notNull(),
+    title: text("title").notNull(),
+    description: text("description").notNull(),
+    recommendation: text("recommendation"),
+    fix_available: boolean("fix_available").notNull().default(false),
+    details: jsonb("details")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+  },
+  (table) => [index("repo_scan_checks_scan_id_idx").on(table.scan_id)]
 );
 
 export const api_keys = pgTable("api_keys", {

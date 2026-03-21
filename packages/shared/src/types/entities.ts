@@ -32,3 +32,45 @@ export interface Repo {
 export interface RepoWithStats extends Repo {
   run_count: number;
 }
+
+// ── Scan Types ──────────────────────────────────────────
+
+export interface RepoScan {
+  id: string;
+  repo_id: string;
+  workspace_id: string;
+  score: number | null;
+  status: "pending" | "completed" | "error";
+  triggered_by: string;
+  error_message: string | null;
+  started_at: string | null;
+  completed_at: string | null;
+  created_at: string;
+}
+
+export interface RepoScanCheck {
+  id: string;
+  scan_id: string;
+  check_id: string;
+  status: "pass" | "warn" | "fail" | "skip";
+  severity: "critical" | "warning" | "info";
+  weight: number;
+  score: number;
+  title: string;
+  description: string;
+  recommendation: string | null;
+  fix_available: boolean;
+  details: Record<string, unknown>;
+}
+
+export interface RepoScanDetail extends RepoScan {
+  checks: RepoScanCheck[];
+}
+
+export interface RepoWithScanStats extends RepoWithStats {
+  latest_scan_score: number | null;
+  latest_scan_status: string | null;
+  latest_scan_at: string | null;
+  critical_count: number;
+  warning_count: number;
+}
