@@ -68,6 +68,25 @@ export interface RepoScanDetail extends RepoScan {
   checks: RepoScanCheck[];
 }
 
+// ── Claude Items ────────────────────────────────────────
+
+export interface ClaudeItem {
+  id: string;
+  repo_id: string;
+  workspace_id: string;
+  kind: "skill" | "command";
+  name: string;
+  file_path: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ClaudeItemWithRepo extends ClaudeItem {
+  repo_key: string;
+  repo_display_name: string | null;
+}
+
 export interface RepoWithScanStats extends RepoWithStats {
   latest_scan_score: number | null;
   latest_scan_status: string | null;

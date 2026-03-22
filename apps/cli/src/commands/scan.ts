@@ -1,7 +1,7 @@
 import { Command } from "commander";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey } from "../lib/git.js";
-import { runDeterministicChecks } from "../lib/scan-checks.js";
+import { runDeterministicChecks, collectClaudeItems } from "../lib/scan-checks.js";
 import { runQualityChecks } from "../lib/scan-quality.js";
 import type { CheckResult } from "../lib/scan-checks.js";
 
@@ -84,6 +84,9 @@ export const scanCommand = new Command("scan")
       console.log();
     }
 
+    // Collect Claude items (skills & commands)
+    const claudeItems = collectClaudeItems(repoRoot);
+
     // Submit results to server
     try {
       const body = {
@@ -91,6 +94,7 @@ export const scanCommand = new Command("scan")
         repo_key: repoKey,
         score: totalScore,
         checks: allChecks,
+        claude_items: claudeItems,
         started_at: startedAt,
         completed_at: completedAt,
       };

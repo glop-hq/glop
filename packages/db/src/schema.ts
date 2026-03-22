@@ -117,6 +117,11 @@ export const scanSeverityEnum = pgEnum("scan_severity", [
   "info",
 ]);
 
+export const claudeItemKindEnum = pgEnum("claude_item_kind", [
+  "skill",
+  "command",
+]);
+
 // ── Tables ─────────────────────────────────────────────
 
 export const users = pgTable(
@@ -544,6 +549,38 @@ export const repo_scan_checks = pgTable(
       .default({}),
   },
   (table) => [index("repo_scan_checks_scan_id_idx").on(table.scan_id)]
+);
+
+export const claude_items = pgTable(
+  "claude_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    kind: claudeItemKindEnum("kind").notNull(),
+    name: text("name").notNull(),
+    file_path: text("file_path").notNull(),
+    content: text("content").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("claude_items_workspace_id_idx").on(table.workspace_id),
+    index("claude_items_repo_id_idx").on(table.repo_id),
+    uniqueIndex("claude_items_repo_kind_name_idx").on(
+      table.repo_id,
+      table.kind,
+      table.name
+    ),
+  ]
 );
 
 export const api_keys = pgTable("api_keys", {

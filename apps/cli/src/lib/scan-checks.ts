@@ -293,6 +293,54 @@ export function checkRepoStructure(repoRoot: string): CheckResult {
   };
 }
 
+// ── Collect Claude items (skills & commands) ───────────
+
+export interface ClaudeItemEntry {
+  kind: "skill" | "command";
+  name: string;
+  file_path: string;
+  content: string;
+}
+
+const MAX_ITEM_SIZE = 50 * 1024; // 50KB
+
+export function collectClaudeItems(repoRoot: string): ClaudeItemEntry[] {
+  const items: ClaudeItemEntry[] = [];
+
+  // Collect skills from .claude/skills/*/SKILL.md
+  const skillDirs = dirHasFiles(repoRoot, ".claude", "skills");
+  for (const dir of skillDirs) {
+    const skillPath = path.join(".claude", "skills", dir, "SKILL.md");
+    const content = readFile(repoRoot, skillPath);
+    if (content && content.length <= MAX_ITEM_SIZE) {
+      items.push({
+        kind: "skill",
+        name: dir,
+        file_path: skillPath,
+        content,
+      });
+    }
+  }
+
+  // Collect commands from .claude/commands/*.md
+  const commandFiles = dirHasFiles(repoRoot, ".claude", "commands");
+  for (const file of commandFiles) {
+    if (!file.endsWith(".md")) continue;
+    const cmdPath = path.join(".claude", "commands", file);
+    const content = readFile(repoRoot, cmdPath);
+    if (content && content.length <= MAX_ITEM_SIZE) {
+      items.push({
+        kind: "command",
+        name: file.replace(/\.md$/, ""),
+        file_path: cmdPath,
+        content,
+      });
+    }
+  }
+
+  return items;
+}
+
 // ── Run all deterministic checks ───────────────────────
 
 export function runDeterministicChecks(repoRoot: string): CheckResult[] {

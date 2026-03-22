@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { workspace_id, repo_key, score, checks, started_at, completed_at, error_message } =
+    const { workspace_id, repo_key, score, checks, claude_items, started_at, completed_at, error_message } =
       parsed.data;
 
     // Look up repo by (workspace_id, repo_key)
@@ -93,6 +93,24 @@ export async function POST(request: NextRequest) {
           recommendation: check.recommendation ?? null,
           fix_available: check.fix_available ?? false,
           details: check.details ?? {},
+        }))
+      );
+    }
+
+    // Replace claude_items for this repo
+    await db
+      .delete(schema.claude_items)
+      .where(eq(schema.claude_items.repo_id, repo.id));
+
+    if (claude_items.length > 0) {
+      await db.insert(schema.claude_items).values(
+        claude_items.map((item) => ({
+          repo_id: repo.id,
+          workspace_id,
+          kind: item.kind as "skill" | "command",
+          name: item.name,
+          file_path: item.file_path,
+          content: item.content,
         }))
       );
     }

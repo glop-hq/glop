@@ -57,6 +57,13 @@
       "when": 1774112376782,
       "tag": "0007_glamorous_excalibur",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1774144152505,
+      "tag": "0008_even_eternity",
+      "breakpoints": true
     }
   ]
 }

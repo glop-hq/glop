@@ -6,7 +6,7 @@
  * Env: GLOP_API_KEY
  */
 
-import { runDeterministicChecks } from "./scan-checks.js";
+import { runDeterministicChecks, collectClaudeItems } from "./scan-checks.js";
 import { runQualityChecks } from "./scan-quality.js";
 
 const [serverUrl, workspaceId, repoRoot, repoKey] = process.argv.slice(2);
@@ -23,6 +23,7 @@ async function main() {
   const qualityChecks = runQualityChecks(repoRoot);
   const allChecks = [...deterministicChecks, ...qualityChecks];
   const totalScore = allChecks.reduce((sum, c) => sum + c.score, 0);
+  const claudeItems = collectClaudeItems(repoRoot);
 
   const completedAt = new Date().toISOString();
 
@@ -37,6 +38,7 @@ async function main() {
       repo_key: repoKey,
       score: totalScore,
       checks: allChecks,
+      claude_items: claudeItems,
       started_at: startedAt,
       completed_at: completedAt,
     }),

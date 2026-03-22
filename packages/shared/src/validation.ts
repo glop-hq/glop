@@ -184,11 +184,19 @@ export const scanCheckResultSchema = z.object({
   details: z.record(z.unknown()).default({}),
 });
 
+export const claudeItemSchema = z.object({
+  kind: z.enum(["skill", "command"]),
+  name: z.string().min(1).max(200),
+  file_path: z.string().min(1),
+  content: z.string().min(1).max(50000),
+});
+
 export const scanResultSchema = z.object({
   workspace_id: z.string().uuid(),
   repo_key: z.string().min(1),
   score: z.number().int().min(0).max(100),
   checks: z.array(scanCheckResultSchema).min(1),
+  claude_items: z.array(claudeItemSchema).optional().default([]),
   started_at: z.string(),
   completed_at: z.string(),
   error_message: z.string().nullable().optional(),

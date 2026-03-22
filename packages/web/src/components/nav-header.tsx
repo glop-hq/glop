@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Radio, Clock, BarChart3, FolderGit2, Check, ChevronsUpDown, Plus } from "lucide-react";
+import { Radio, Clock, BarChart3, FolderGit2, Sparkles, Check, ChevronsUpDown, Plus } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { Popover } from "@/components/ui/popover";
@@ -16,6 +16,7 @@ const navItems = [
   { href: "/history", label: "History", icon: Clock },
   { href: "/insights", label: "Insights", icon: BarChart3 },
   { href: "/repos", label: "Repos", icon: FolderGit2 },
+  { href: "/skills", label: "Skills", icon: Sparkles },
 ];
 
 export function NavHeader() {
