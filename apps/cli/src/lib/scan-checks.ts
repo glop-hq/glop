@@ -287,7 +287,7 @@ export function checkRepoStructure(repoRoot: string): CheckResult {
       : `Found large files (>500KB): ${issues.slice(0, 3).join(", ")}${issues.length > 3 ? ` and ${issues.length - 3} more` : ""}.`,
     recommendation: isClean
       ? null
-      : "Consider breaking up large files or adding them to .gitignore if they are generated artifacts.",
+      : "Consider adding generated artifacts to .gitignore, or breaking up large source files.",
     fix_available: false,
     details: { large_files: issues.slice(0, 10) },
   };
