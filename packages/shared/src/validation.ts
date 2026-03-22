@@ -191,6 +191,83 @@ export const claudeItemSchema = z.object({
   content: z.string().min(1).max(50000),
 });
 
+export const sessionFacetSchema = z.object({
+  run_id: z.string().uuid(),
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  developer_id: z.string().min(1),
+  goal_categories: z.record(z.number().int().min(0)),
+  outcome: z.enum([
+    "fully_achieved",
+    "mostly_achieved",
+    "partially_achieved",
+    "not_achieved",
+    "unclear",
+  ]),
+  satisfaction: z.enum([
+    "frustrated",
+    "dissatisfied",
+    "likely_satisfied",
+    "satisfied",
+    "happy",
+    "unsure",
+  ]),
+  session_type: z.enum([
+    "single_task",
+    "multi_task",
+    "iterative_refinement",
+    "exploration",
+    "quick_question",
+  ]),
+  friction_counts: z.record(z.number().int().min(0)),
+  friction_detail: z.string().nullable().optional(),
+  primary_success: z.string().nullable().optional(),
+  files_touched: z.array(z.string()).optional().default([]),
+  area: z.string().nullable().optional(),
+  brief_summary: z.string().min(1),
+  duration_minutes: z.number().int().min(0).nullable().optional(),
+  iteration_count: z.number().int().min(0).nullable().optional(),
+});
+
+export const repoInsightSchema = z.object({
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  period_start: z.string(),
+  period_end: z.string(),
+  session_count: z.number().int().min(0),
+  developer_count: z.number().int().min(0),
+  outcome_distribution: z.record(z.number().int().min(0)),
+  friction_analysis: z.array(
+    z.object({
+      category: z.string(),
+      count: z.number().int(),
+      area: z.string().nullable(),
+      detail: z.string(),
+    })
+  ),
+  success_patterns: z.array(
+    z.object({
+      pattern: z.string(),
+      area: z.string().nullable(),
+      detail: z.string(),
+    })
+  ),
+  claude_md_suggestions: z.array(z.string()),
+  file_coupling: z.array(
+    z.object({
+      files: z.array(z.string()),
+      frequency: z.number(),
+    })
+  ),
+  area_complexity: z.array(
+    z.object({
+      area: z.string(),
+      avg_iterations: z.number(),
+      avg_friction_count: z.number(),
+    })
+  ),
+});
+
 export const scanResultSchema = z.object({
   workspace_id: z.string().uuid(),
   repo_key: z.string().min(1),

@@ -5,6 +5,8 @@ import {
   text,
   integer,
   boolean,
+  real,
+  date,
   index,
   uuid,
   timestamp,
@@ -580,6 +582,124 @@ export const claude_items = pgTable(
       table.kind,
       table.name
     ),
+  ]
+);
+
+export const session_facets = pgTable(
+  "session_facets",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id)
+      .unique(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    developer_entity_id: uuid("developer_entity_id").references(
+      () => developers.id
+    ),
+    developer_id: text("developer_id").notNull(),
+    goal_categories: jsonb("goal_categories")
+      .$type<Record<string, number>>()
+      .notNull(),
+    outcome: text("outcome").notNull(),
+    satisfaction: text("satisfaction").notNull(),
+    session_type: text("session_type").notNull(),
+    friction_counts: jsonb("friction_counts")
+      .$type<Record<string, number>>()
+      .notNull(),
+    friction_detail: text("friction_detail"),
+    primary_success: text("primary_success"),
+    files_touched: jsonb("files_touched")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    area: text("area"),
+    brief_summary: text("brief_summary").notNull(),
+    duration_minutes: integer("duration_minutes"),
+    iteration_count: integer("iteration_count"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("session_facets_repo_id_created_at_idx").on(
+      table.repo_id,
+      table.created_at
+    ),
+    index("session_facets_workspace_id_created_at_idx").on(
+      table.workspace_id,
+      table.created_at
+    ),
+  ]
+);
+
+export const repo_insights = pgTable(
+  "repo_insights",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    period_start: date("period_start", { mode: "string" }).notNull(),
+    period_end: date("period_end", { mode: "string" }).notNull(),
+    session_count: integer("session_count").notNull(),
+    developer_count: integer("developer_count").notNull(),
+    outcome_distribution: jsonb("outcome_distribution")
+      .$type<Record<string, number>>()
+      .notNull(),
+    friction_analysis: jsonb("friction_analysis")
+      .$type<
+        Array<{
+          category: string;
+          count: number;
+          area: string | null;
+          detail: string;
+        }>
+      >()
+      .notNull(),
+    success_patterns: jsonb("success_patterns")
+      .$type<
+        Array<{
+          pattern: string;
+          area: string | null;
+          detail: string;
+        }>
+      >()
+      .notNull(),
+    claude_md_suggestions: jsonb("claude_md_suggestions")
+      .$type<string[]>()
+      .notNull(),
+    file_coupling: jsonb("file_coupling")
+      .$type<Array<{ files: string[]; frequency: number }>>()
+      .notNull(),
+    area_complexity: jsonb("area_complexity")
+      .$type<
+        Array<{
+          area: string;
+          avg_iterations: number;
+          avg_friction_count: number;
+        }>
+      >()
+      .notNull(),
+    generated_by: text("generated_by").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("repo_insights_repo_id_created_at_idx").on(
+      table.repo_id,
+      table.created_at
+    ),
+    index("repo_insights_workspace_id_idx").on(table.workspace_id),
   ]
 );
 

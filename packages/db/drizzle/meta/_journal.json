@@ -64,6 +64,13 @@
       "when": 1774144152505,
       "tag": "0008_even_eternity",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774193003551,
+      "tag": "0009_lazy_king_bedlam",
+      "breakpoints": true
     }
   ]
 }
