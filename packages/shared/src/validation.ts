@@ -154,6 +154,22 @@ export const analyticsQuerySchema = z.object({
   user_id: z.string().uuid().optional(),
 });
 
+export const dashboardQuerySchema = z.object({
+  workspace_id: z.string().uuid(),
+  period: analyticsPeriodSchema.default("7d"),
+});
+
+export const frictionStatusUpdateSchema = z.object({
+  workspace_id: z.string().uuid(),
+  status: z.enum(["open", "acknowledged", "resolved", "wont_fix"]),
+});
+
+export const digestSettingsSchema = z.object({
+  workspace_id: z.string().uuid(),
+  frequency: z.enum(["weekly", "biweekly", "monthly", "disabled"]),
+  enabled: z.boolean(),
+});
+
 export const developerUpdateSchema = z.object({
   display_name: z.string().min(1).max(100).optional(),
   email: z.string().email().optional(),

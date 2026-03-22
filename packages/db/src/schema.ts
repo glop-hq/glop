@@ -703,6 +703,113 @@ export const repo_insights = pgTable(
   ]
 );
 
+// ── Dashboard: Friction & Digests ──────────────────────
+
+export const frictionStatusEnum = pgEnum("friction_status", [
+  "open",
+  "acknowledged",
+  "resolved",
+  "wont_fix",
+]);
+
+export const digestFrequencyEnum = pgEnum("digest_frequency", [
+  "weekly",
+  "biweekly",
+  "monthly",
+  "disabled",
+]);
+
+export const friction_insights = pgTable(
+  "friction_insights",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    repo_id: uuid("repo_id").references(() => repos.id, {
+      onDelete: "cascade",
+    }),
+    category: text("category").notNull(),
+    description: text("description").notNull(),
+    frequency: integer("frequency").notNull(),
+    severity: integer("severity").notNull(),
+    recency_weight: real("recency_weight").notNull(),
+    impact_score: real("impact_score").notNull(),
+    affected_areas: jsonb("affected_areas")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    suggested_action: text("suggested_action"),
+    status: frictionStatusEnum("status").notNull().default("open"),
+    first_seen_at: timestamp("first_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_seen_at: timestamp("last_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    resolved_at: timestamp("resolved_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    created_at: timestamp("created_at", {
+      mode: "string",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", {
+      mode: "string",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("friction_insights_workspace_id_idx").on(table.workspace_id),
+    index("friction_insights_impact_score_idx").on(table.impact_score),
+    index("friction_insights_repo_id_idx").on(table.repo_id),
+  ]
+);
+
+export const digest_schedules = pgTable(
+  "digest_schedules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    user_id: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    frequency: digestFrequencyEnum("frequency").notNull().default("weekly"),
+    enabled: boolean("enabled").notNull().default(true),
+    last_sent_at: timestamp("last_sent_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    created_at: timestamp("created_at", {
+      mode: "string",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", {
+      mode: "string",
+      withTimezone: true,
+    })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("digest_schedules_user_workspace_idx").on(
+      table.user_id,
+      table.workspace_id
+    ),
+  ]
+);
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),
