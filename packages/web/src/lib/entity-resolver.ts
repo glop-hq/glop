@@ -113,11 +113,11 @@ export async function resolveOrCreateDeveloper(
     })
     .onConflictDoUpdate({
       target: [schema.developers.workspace_id, schema.developers.email],
+      targetWhere: sql`email IS NOT NULL`,
       set: {
         last_active_at: now,
         updated_at: now,
       },
-      setWhere: sql`email IS NOT NULL`,
     })
     .returning({ id: schema.developers.id });
 
