@@ -192,6 +192,39 @@ export const hookCommand = new Command("__hook")
           // Silently ignore — PR comment is best-effort
         }
       }
+      // Spawn background facet worker on SessionEnd
+      if (payload.hook_event_name === "SessionEnd" && res.ok && resBody?.run_id) {
+        try {
+          const transcriptPath = payload.transcript_path;
+          if (typeof transcriptPath === "string") {
+            const repoRoot = getRepoRoot();
+            if (repoRoot) {
+              const facetWorkerPath = path.join(
+                path.dirname(fileURLToPath(import.meta.url)),
+                "lib",
+                "facet-worker.js"
+              );
+              const repoKey = payload.repo_key as string;
+              const child = spawn(
+                process.execPath,
+                [facetWorkerPath, config.server_url, repoConfig.workspace_id, repoRoot, repoKey, resBody.run_id, transcriptPath],
+                {
+                  detached: true,
+                  stdio: "ignore",
+                  env: {
+                    ...process.env,
+                    GLOP_API_KEY: config.api_key,
+                    GLOP_DEVELOPER_ID: config.developer_id,
+                  },
+                }
+              );
+              child.unref();
+            }
+          }
+        } catch {
+          // Silently ignore — facet extraction is best-effort
+        }
+      }
     } catch {
       if (payload.hook_event_name === "SessionStart") {
         console.log(`glop: server unreachable at ${config.server_url}`);

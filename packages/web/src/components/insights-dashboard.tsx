@@ -11,6 +11,7 @@ import { RunsTimeSeriesChart } from "@/components/charts/runs-time-series-chart"
 import { DeveloperStatsTable } from "@/components/charts/developer-stats-table";
 import { TopReposChart } from "@/components/charts/top-repos-chart";
 import { BusiestHoursChart } from "@/components/charts/busiest-hours-chart";
+import { OperationalMemorySection } from "./operational-memory-section";
 import { RunsTable } from "@/components/charts/runs-table";
 import { EfficiencyScatterChart } from "@/components/charts/efficiency-scatter-chart";
 import type { AnalyticsPeriod } from "@glop/shared";
@@ -382,6 +383,11 @@ export function InsightsDashboard() {
               {data && <TopReposChart data={data.top_repos} />}
             </ChartCard>
           </div>
+
+          {/* Operational Memory */}
+          {currentWorkspace && (
+            <OperationalMemorySection workspaceId={currentWorkspace.id} />
+          )}
         </>
       )}
     </div>

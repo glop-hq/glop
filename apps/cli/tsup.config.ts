@@ -15,7 +15,7 @@ export default defineConfig([
     define,
   },
   {
-    entry: ["src/lib/pr-comment-worker.ts", "src/lib/scan-worker.ts"],
+    entry: ["src/lib/pr-comment-worker.ts", "src/lib/scan-worker.ts", "src/lib/facet-worker.ts"],
     format: ["esm"],
     dts: false,
     clean: false,

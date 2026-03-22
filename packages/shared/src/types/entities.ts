@@ -87,6 +87,61 @@ export interface ClaudeItemWithRepo extends ClaudeItem {
   repo_display_name: string | null;
 }
 
+// ── Session Facets ──────────────────────────────────────
+
+export interface SessionFacet {
+  id: string;
+  run_id: string;
+  repo_id: string;
+  workspace_id: string;
+  developer_entity_id: string | null;
+  developer_id: string;
+  goal_categories: Record<string, number>;
+  outcome: string;
+  satisfaction: string;
+  session_type: string;
+  friction_counts: Record<string, number>;
+  friction_detail: string | null;
+  primary_success: string | null;
+  files_touched: string[];
+  area: string | null;
+  brief_summary: string;
+  duration_minutes: number | null;
+  iteration_count: number | null;
+  created_at: string;
+}
+
+export interface RepoInsight {
+  id: string;
+  repo_id: string;
+  workspace_id: string;
+  period_start: string;
+  period_end: string;
+  session_count: number;
+  developer_count: number;
+  outcome_distribution: Record<string, number>;
+  friction_analysis: Array<{
+    category: string;
+    count: number;
+    area: string | null;
+    detail: string;
+  }>;
+  success_patterns: Array<{
+    pattern: string;
+    area: string | null;
+    detail: string;
+  }>;
+  claude_md_suggestions: string[];
+  file_coupling: Array<{ files: string[]; frequency: number }>;
+  area_complexity: Array<{
+    area: string;
+    avg_iterations: number;
+    avg_friction_count: number;
+  }>;
+  generated_by: string;
+  created_at: string;
+}
+
 export interface RepoWithScanStats extends RepoWithStats {
   latest_scan_score: number | null;
   latest_scan_status: string | null;

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRepoDetail } from "@/hooks/use-repo-detail";
+import { RepoInsights } from "./repo-insights";
 import { ScoreBadge } from "./score-badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,6 +238,9 @@ export function RepoDetail({ repoId }: { repoId: string }) {
       )}
 
       {/* Recent Runs */}
+      {/* Operational Insights */}
+      <RepoInsights workspaceId={repo.workspace_id} repoId={repo.id} />
+
       {recent_runs.length > 0 && (
         <Card>
           <CardHeader>
