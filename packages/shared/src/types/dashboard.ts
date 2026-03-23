@@ -287,3 +287,49 @@ export interface RepoStandardsUsageResponse {
     total_invocations: number;
   }>;
 }
+
+// ── Smart Suggestions ────────────────────────────────────────────
+
+export type SuggestionType = "skill" | "command" | "hook";
+export type SuggestionStatus = "active" | "accepted" | "dismissed" | "expired";
+
+export interface StandardSuggestion {
+  id: string;
+  repo_id: string;
+  workspace_id: string;
+  suggestion_type: SuggestionType;
+  title: string;
+  rationale: string;
+  draft_content: string;
+  draft_filename: string;
+  pattern_type: string;
+  pattern_data: Record<string, unknown>;
+  status: SuggestionStatus;
+  dismiss_reason: string | null;
+  accepted_at: string | null;
+  dismissed_at: string | null;
+  expires_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SuggestionSummaryItem {
+  id: string;
+  repo_id: string;
+  workspace_id: string;
+  suggestion_type: SuggestionType;
+  title: string;
+  rationale: string;
+  draft_filename: string;
+  pattern_type: string;
+  status: SuggestionStatus;
+  created_at: string;
+  repo_key: string;
+  repo_display_name: string | null;
+}
+
+export interface SuggestionsSummary {
+  total_active: number;
+  by_type: Record<string, number>;
+  top_suggestions: SuggestionSummaryItem[];
+}

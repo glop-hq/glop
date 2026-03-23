@@ -1181,6 +1181,74 @@ export const standard_usage = pgTable(
   ]
 );
 
+// ── Smart Suggestions ────────────────────────────────────────────
+
+export const suggestionStatusEnum = pgEnum("suggestion_status", [
+  "active",
+  "accepted",
+  "dismissed",
+  "expired",
+]);
+
+export const suggestionTypeEnum = pgEnum("suggestion_type", [
+  "skill",
+  "command",
+  "hook",
+]);
+
+export const standard_suggestions = pgTable(
+  "standard_suggestions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    suggestion_type: suggestionTypeEnum("suggestion_type").notNull(),
+    title: text("title").notNull(),
+    rationale: text("rationale").notNull(),
+    draft_content: text("draft_content").notNull(),
+    draft_filename: text("draft_filename").notNull(),
+    pattern_type: text("pattern_type").notNull(),
+    pattern_data: jsonb("pattern_data")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    status: suggestionStatusEnum("status").notNull().default("active"),
+    dismiss_reason: text("dismiss_reason"),
+    accepted_at: timestamp("accepted_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    dismissed_at: timestamp("dismissed_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    expires_at: timestamp("expires_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("standard_suggestions_repo_status_idx").on(
+      table.repo_id,
+      table.status
+    ),
+    index("standard_suggestions_workspace_status_idx").on(
+      table.workspace_id,
+      table.status
+    ),
+  ]
+);
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),
