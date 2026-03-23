@@ -3,6 +3,7 @@ import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey } from "../lib/git.js";
 import { runDeterministicChecks, collectClaudeItems } from "../lib/scan-checks.js";
 import { runQualityChecks } from "../lib/scan-quality.js";
+import { extractDirectives } from "../lib/scan-directives.js";
 import type { CheckResult } from "../lib/scan-checks.js";
 
 export const scanCommand = new Command("scan")
@@ -87,6 +88,9 @@ export const scanCommand = new Command("scan")
     // Collect Claude items (skills & commands)
     const claudeItems = collectClaudeItems(repoRoot);
 
+    // Extract CLAUDE.md directives
+    const directives = extractDirectives(repoRoot);
+
     // Submit results to server
     try {
       const body = {
@@ -95,6 +99,7 @@ export const scanCommand = new Command("scan")
         score: totalScore,
         checks: allChecks,
         claude_items: claudeItems,
+        directives,
         started_at: startedAt,
         completed_at: completedAt,
       };

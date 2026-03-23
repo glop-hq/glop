@@ -810,6 +810,68 @@ export const digest_schedules = pgTable(
   ]
 );
 
+// ── PRD 07: Extended Readiness ──────────────────────────
+
+export const claude_md_directives = pgTable(
+  "claude_md_directives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    directive: text("directive").notNull(),
+    source_file: text("source_file").notNull(),
+    source_line: integer("source_line"),
+    category: text("category").notNull(),
+    sessions_relevant: integer("sessions_relevant").notNull().default(0),
+    sessions_followed: integer("sessions_followed").notNull().default(0),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("claude_md_directives_repo_id_idx").on(table.repo_id),
+    index("claude_md_directives_workspace_id_idx").on(table.workspace_id),
+  ]
+);
+
+export const run_mcp_usage = pgTable(
+  "run_mcp_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    mcp_server: text("mcp_server").notNull(),
+    tool_calls: integer("tool_calls").notNull().default(0),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("run_mcp_usage_repo_id_mcp_server_idx").on(
+      table.repo_id,
+      table.mcp_server
+    ),
+    uniqueIndex("run_mcp_usage_run_id_mcp_server_idx").on(
+      table.run_id,
+      table.mcp_server
+    ),
+  ]
+);
+
 // ── MCP Visibility & Compliance ───────────────────────
 
 export const mcpStatusEnum = pgEnum("mcp_status", [
