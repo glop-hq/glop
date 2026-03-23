@@ -364,6 +364,46 @@ export async function processHook(
     }
   }
 
+  // ── Context health tracking ──
+  const resolvedRepoId = existingRun?.repo_id ?? repoId;
+
+  if (eventType === "run.context_compacted" && resolvedRepoId) {
+    // Compute minutes since session start
+    const runStartedAt = existingRun?.started_at ?? now;
+    const minutesSinceStart =
+      (new Date(now).getTime() - new Date(runStartedAt).getTime()) / 60_000;
+
+    await db
+      .insert(schema.run_context_health)
+      .values({
+        run_id: runId,
+        repo_id: resolvedRepoId,
+        workspace_id: ctx.workspace_id,
+        compaction_count: 1,
+        first_compaction_at_min: Math.round(minutesSinceStart * 10) / 10,
+      })
+      .onConflictDoUpdate({
+        target: schema.run_context_health.run_id,
+        set: {
+          compaction_count: sql`${schema.run_context_health.compaction_count} + 1`,
+          first_compaction_at_min: sql`COALESCE(${schema.run_context_health.first_compaction_at_min}, ${Math.round(minutesSinceStart * 10) / 10})`,
+        },
+      });
+  }
+
+  if (eventType === "run.completed" && resolvedRepoId) {
+    // Ensure every completed session has a context health row
+    await db
+      .insert(schema.run_context_health)
+      .values({
+        run_id: runId,
+        repo_id: resolvedRepoId,
+        workspace_id: ctx.workspace_id,
+        compaction_count: 0,
+      })
+      .onConflictDoNothing({ target: schema.run_context_health.run_id });
+  }
+
   // Detect MCP tool usage from tool_name pattern: mcp__<server>__<tool>
   if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string") {
     const parts = (rawPayload.tool_name as string).split("__");

@@ -1,8 +1,9 @@
 import { Command } from "commander";
-import { openSync, readSync, closeSync, readFileSync } from "fs";
+import { openSync, readSync, closeSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
+import os from "os";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 import { readMcpConfigs } from "../lib/mcp-config.js";
@@ -172,6 +173,41 @@ export const hookCommand = new Command("__hook")
           }
         } catch {
           // Silently ignore — scan is best-effort
+        }
+      }
+
+      // Show context health hint on SessionStart (once per day per repo)
+      if (payload.hook_event_name === "SessionStart" && res.ok) {
+        try {
+          const repoKey = payload.repo_key as string;
+          const hintFile = path.join(os.homedir(), ".config", "glop", "hint-timestamps.json");
+          let hints: Record<string, string> = {};
+          if (existsSync(hintFile)) {
+            try { hints = JSON.parse(readFileSync(hintFile, "utf-8")); } catch { /* ignore */ }
+          }
+          const lastHint = hints[repoKey];
+          const oneDayAgo = Date.now() - 86_400_000;
+          if (!lastHint || new Date(lastHint).getTime() < oneDayAgo) {
+            const recRes = await fetch(
+              `${config.server_url}/api/v1/repos/context-recommendation?workspace_id=${repoConfig.workspace_id}&repo_key=${encodeURIComponent(repoKey)}`,
+              {
+                headers: { Authorization: `Bearer ${config.api_key}` },
+                signal: AbortSignal.timeout(3000),
+              }
+            );
+            if (recRes.ok) {
+              const recBody = (await recRes.json()) as { data: { recommended_max_duration_min: number | null } | null };
+              if (recBody.data?.recommended_max_duration_min) {
+                console.log(`glop: Sessions in this repo work best under ${recBody.data.recommended_max_duration_min} minutes. Consider /compact or starting fresh after that.`);
+                hints[repoKey] = new Date().toISOString();
+                const dir = path.dirname(hintFile);
+                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+                writeFileSync(hintFile, JSON.stringify(hints, null, 2));
+              }
+            }
+          }
+        } catch {
+          // Silently ignore — hint is best-effort
         }
       }
 

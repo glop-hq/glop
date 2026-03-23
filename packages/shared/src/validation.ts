@@ -327,6 +327,19 @@ export const repoInsightSchema = z.object({
   ),
 });
 
+export const contextHealthSchema = z.object({
+  run_id: z.string().uuid(),
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  compaction_count: z.number().int().min(0),
+  first_compaction_at_min: z.number().min(0).nullable().optional(),
+  peak_utilization_pct: z.number().min(0).max(100).nullable().optional(),
+  end_utilization_pct: z.number().min(0).max(100).nullable().optional(),
+  total_input_tokens: z.number().int().min(0).nullable().optional(),
+  total_output_tokens: z.number().int().min(0).nullable().optional(),
+  context_limit_tokens: z.number().int().min(0).nullable().optional(),
+});
+
 export const extractedDirectiveSchema = z.object({
   directive: z.string().min(1),
   source_file: z.string().min(1),
