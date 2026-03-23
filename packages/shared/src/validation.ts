@@ -284,12 +284,20 @@ export const repoInsightSchema = z.object({
   ),
 });
 
+export const extractedDirectiveSchema = z.object({
+  directive: z.string().min(1),
+  source_file: z.string().min(1),
+  source_line: z.number().int().min(1),
+  category: z.string().min(1),
+});
+
 export const scanResultSchema = z.object({
   workspace_id: z.string().uuid(),
   repo_key: z.string().min(1),
   score: z.number().int().min(0).max(100),
   checks: z.array(scanCheckResultSchema).min(1),
   claude_items: z.array(claudeItemSchema).optional().default([]),
+  directives: z.array(extractedDirectiveSchema).optional().default([]),
   started_at: z.string(),
   completed_at: z.string(),
   error_message: z.string().nullable().optional(),

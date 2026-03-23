@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { workspace_id, repo_key, score, checks, claude_items, started_at, completed_at, error_message } =
+    const { workspace_id, repo_key, score, checks, claude_items, directives, started_at, completed_at, error_message } =
       parsed.data;
 
     // Look up repo by (workspace_id, repo_key)
@@ -93,6 +93,24 @@ export async function POST(request: NextRequest) {
           recommendation: check.recommendation ?? null,
           fix_available: check.fix_available ?? false,
           details: check.details ?? {},
+        }))
+      );
+    }
+
+    // Replace directives for this repo
+    await db
+      .delete(schema.claude_md_directives)
+      .where(eq(schema.claude_md_directives.repo_id, repo.id));
+
+    if (directives.length > 0) {
+      await db.insert(schema.claude_md_directives).values(
+        directives.map((d) => ({
+          repo_id: repo.id,
+          workspace_id,
+          directive: d.directive,
+          source_file: d.source_file,
+          source_line: d.source_line,
+          category: d.category,
         }))
       );
     }

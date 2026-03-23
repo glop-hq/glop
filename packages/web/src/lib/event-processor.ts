@@ -1,4 +1,4 @@
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { schema, type DbClient } from "./db";
 import {
   deriveRunPatch,
@@ -284,6 +284,34 @@ export async function processHook(
       ...(rawPayload.slug ? { slug: rawPayload.slug } : {}),
     },
   });
+
+  // Track MCP tool usage
+  if (
+    hookType === "PostToolUse" &&
+    typeof rawPayload.tool_name === "string" &&
+    rawPayload.tool_name.startsWith("mcp__")
+  ) {
+    const parts = rawPayload.tool_name.split("__");
+    if (parts.length >= 2 && repoId) {
+      const mcpServer = parts[1];
+
+      await db
+        .insert(schema.run_mcp_usage)
+        .values({
+          run_id: runId,
+          repo_id: repoId,
+          workspace_id: ctx.workspace_id,
+          mcp_server: mcpServer,
+          tool_calls: 1,
+        })
+        .onConflictDoUpdate({
+          target: [schema.run_mcp_usage.run_id, schema.run_mcp_usage.mcp_server],
+          set: {
+            tool_calls: sql`${schema.run_mcp_usage.tool_calls} + 1`,
+          },
+        });
+    }
+  }
 
   // Extract commit/PR artifacts from PostToolUse Bash commands
   if (

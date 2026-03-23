@@ -1,5 +1,7 @@
 import fs from "fs";
 import path from "path";
+import { checkMcpServerAdoption } from "./scan-mcp.js";
+import { checkClaudeMdCompliance } from "./scan-directives.js";
 
 export interface CheckResult {
   check_id: string;
@@ -45,8 +47,8 @@ export function checkClaudeMdExists(repoRoot: string): CheckResult {
     check_id: "claude_md_exists",
     status: exists ? "pass" : "fail",
     severity: "critical",
-    weight: 20,
-    score: exists ? 20 : 0,
+    weight: 15,
+    score: exists ? 15 : 0,
     title: exists ? "CLAUDE.md found" : "Missing CLAUDE.md",
     description: exists
       ? "Repository has a CLAUDE.md file at the root."
@@ -352,5 +354,7 @@ export function runDeterministicChecks(repoRoot: string): CheckResult[] {
     checkTestPaths(repoRoot),
     checkLocalDocs(repoRoot),
     checkRepoStructure(repoRoot),
+    checkMcpServerAdoption(repoRoot),
+    checkClaudeMdCompliance(repoRoot),
   ];
 }
