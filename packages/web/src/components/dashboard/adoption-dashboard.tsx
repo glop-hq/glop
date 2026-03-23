@@ -210,7 +210,7 @@ export function AdoptionDashboard() {
       </ChartCard>
 
       {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-5">
         <Link
           href="/dashboard/insights"
           className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
@@ -245,6 +245,15 @@ export function AdoptionDashboard() {
           <p className="font-medium">MCP Servers & Compliance</p>
           <p className="text-sm text-muted-foreground">
             Track MCP usage, approvals, and compliance posture
+          </p>
+        </Link>
+        <Link
+          href="/dashboard/standards-usage"
+          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
+        >
+          <p className="font-medium">Standards Usage</p>
+          <p className="text-sm text-muted-foreground">
+            Track skill, command, and agent adoption and effectiveness
           </p>
         </Link>
       </div>

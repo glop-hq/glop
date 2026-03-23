@@ -216,3 +216,74 @@ export interface DigestSchedule {
   enabled: boolean;
   last_sent_at: string | null;
 }
+
+// ── Standards Usage ──────────────────────────────────────────────
+
+export type StandardType = "skill" | "command" | "hook" | "agent";
+
+export interface StandardUsageSummary {
+  total_invocations: number;
+  active_standards: number;
+  installed_standards: number;
+  adoption_rate: number;
+  total_invocations_change: number | null;
+}
+
+export interface StandardUsageRow {
+  standard_id: string | null;
+  standard_name: string;
+  standard_type: StandardType;
+  invocation_count: number;
+  unique_developers: number;
+  unique_repos: number;
+  last_used_at: string;
+  effectiveness_score: number | null;
+  installed_repos: number;
+  active_repos: number;
+}
+
+export interface StandardUsageTrendPoint {
+  date: string;
+  invocations: number;
+}
+
+export interface StandardsUsageResponse {
+  period: AnalyticsPeriod;
+  summary: StandardUsageSummary;
+  standards: StandardUsageRow[];
+  trend: StandardUsageTrendPoint[];
+}
+
+export interface StandardEffectivenessResponse {
+  standard_name: string;
+  standard_type: StandardType;
+  sessions_using: number;
+  sessions_not_using: number;
+  success_rate_with: number | null;
+  success_rate_without: number | null;
+  effectiveness_score: number | null;
+  confidence: "high" | "medium" | "low" | "insufficient";
+  top_repos: Array<{ repo_id: string; repo_key: string; invocations: number }>;
+  usage_trend: StandardUsageTrendPoint[];
+}
+
+export interface RepoStandardUsageRow {
+  standard_name: string;
+  standard_type: StandardType;
+  invocation_count: number;
+  unique_developers: number;
+  last_used_at: string;
+  effectiveness_score: number | null;
+}
+
+export interface RepoStandardsUsageResponse {
+  period: AnalyticsPeriod;
+  repo_id: string;
+  standards: RepoStandardUsageRow[];
+  developer_breakdown: Array<{
+    developer_id: string;
+    display_name: string | null;
+    standards_used: number;
+    total_invocations: number;
+  }>;
+}

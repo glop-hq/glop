@@ -11,6 +11,7 @@ import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
 import { extractBashOutput, extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
 import { resolveOrCreateDeveloper, resolveOrCreateRepo } from "./entity-resolver";
 import { recordMcpUsage } from "./mcp-usage";
+import { recordStandardUsage } from "./standard-usage";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -432,6 +433,47 @@ export async function processHook(
       } catch (err) {
         // MCP usage tracking is best-effort — don't fail the hook
         console.error("MCP usage recording error:", err);
+      }
+    }
+  }
+
+  // Detect standard (skill/command/agent) usage from tool_name
+  if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string" && repoId) {
+    const toolInput = rawPayload.tool_input as Record<string, unknown> | undefined;
+
+    // Skills & commands: invoked via the Skill tool
+    if (rawPayload.tool_name === "Skill" && typeof toolInput?.skill === "string") {
+      try {
+        await recordStandardUsage(db, ctx.workspace_id, toolInput.skill as string, "skill", {
+          run_id: runId,
+          event_id: eventId,
+          developer_entity_id: developerEntityId,
+          repo_id: repoId,
+          occurred_at: now,
+        });
+      } catch (err) {
+        // Standard usage tracking is best-effort — don't fail the hook
+        console.error("Standard usage recording error (skill):", err);
+      }
+    }
+
+    // Agents: invoked via the Agent tool
+    // Only use subagent_type as name (stable identifier); fall back to
+    // "inline-agent" to avoid unbounded cardinality from description strings
+    if (rawPayload.tool_name === "Agent") {
+      const agentName =
+        (typeof toolInput?.subagent_type === "string" ? toolInput.subagent_type : null) ??
+        "inline-agent";
+      try {
+        await recordStandardUsage(db, ctx.workspace_id, agentName, "agent", {
+          run_id: runId,
+          event_id: eventId,
+          developer_entity_id: developerEntityId,
+          repo_id: repoId,
+          occurred_at: now,
+        });
+      } catch (err) {
+        console.error("Standard usage recording error (agent):", err);
       }
     }
   }

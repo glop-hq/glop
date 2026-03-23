@@ -1133,6 +1133,54 @@ export const mcp_alerts = pgTable(
   ]
 );
 
+// ── Standard Usage Tracking ──────────────────────────────────────
+
+export const standardTypeEnum = pgEnum("standard_type", [
+  "skill",
+  "command",
+  "hook",
+  "agent",
+]);
+
+export const standard_usage = pgTable(
+  "standard_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    event_id: uuid("event_id").references(() => events.id),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    developer_entity_id: uuid("developer_entity_id").references(
+      () => developers.id
+    ),
+    standard_id: uuid("standard_id").references(() => claude_items.id),
+    standard_name: text("standard_name").notNull(),
+    standard_type: standardTypeEnum("standard_type").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("standard_usage_repo_name_created_idx").on(
+      table.repo_id,
+      table.standard_name,
+      table.created_at
+    ),
+    index("standard_usage_workspace_type_idx").on(
+      table.workspace_id,
+      table.standard_type
+    ),
+    index("standard_usage_run_id_idx").on(table.run_id),
+    index("standard_usage_standard_id_idx").on(table.standard_id),
+  ]
+);
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),
