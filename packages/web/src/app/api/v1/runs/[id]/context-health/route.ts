@@ -9,11 +9,11 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ runId: string }> }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireSession();
-    const { runId } = await params;
+    const { id: runId } = await params;
 
     const db = getDb();
 
