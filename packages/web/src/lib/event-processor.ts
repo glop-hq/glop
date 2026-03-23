@@ -10,6 +10,7 @@ import {
 import { classifyHookPayload, type ClassifiedHook } from "./hook-classifier";
 import { extractBashOutput, extractCommitArtifact, extractPrArtifact } from "./artifact-extractor";
 import { resolveOrCreateDeveloper, resolveOrCreateRepo } from "./entity-resolver";
+import { recordMcpUsage } from "./mcp-usage";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -401,6 +402,38 @@ export async function processHook(
         compaction_count: 0,
       })
       .onConflictDoNothing({ target: schema.run_context_health.run_id });
+  }
+
+  // Detect MCP tool usage from tool_name pattern: mcp__<server>__<tool>
+  if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string") {
+    const parts = (rawPayload.tool_name as string).split("__");
+    if (parts.length >= 3 && parts[0] === "mcp") {
+      const serverAlias = parts[1];
+      const toolNameStr = parts.slice(2).join("__");
+      // Detect errors: check for structured error indicators rather than
+      // substring matching, which would false-positive on normal prose
+      const isError = rawPayload.tool_response != null && (
+        // Claude Code sets tool_response to an object with isError
+        (typeof rawPayload.tool_response === "object" &&
+          (rawPayload.tool_response as Record<string, unknown>).isError === true) ||
+        // String responses starting with "Error:" or connection failures
+        (typeof rawPayload.tool_response === "string" &&
+          /^(Error:|ECONNREFUSED|ETIMEDOUT|ENOTFOUND)\b/.test(rawPayload.tool_response))
+      );
+      try {
+        await recordMcpUsage(db, ctx.workspace_id, serverAlias, toolNameStr, {
+          run_id: runId,
+          event_id: eventId,
+          developer_entity_id: developerEntityId,
+          repo_id: repoId,
+          occurred_at: now,
+          is_error: isError,
+        });
+      } catch (err) {
+        // MCP usage tracking is best-effort — don't fail the hook
+        console.error("MCP usage recording error:", err);
+      }
+    }
   }
 
   return { run_id: runId, event_id: eventId };

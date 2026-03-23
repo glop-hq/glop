@@ -873,6 +873,266 @@ export const repo_context_recommendations = pgTable(
   }
 );
 
+// ── PRD 07: Extended Readiness ──────────────────────────
+
+export const claude_md_directives = pgTable(
+  "claude_md_directives",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    directive: text("directive").notNull(),
+    source_file: text("source_file").notNull(),
+    source_line: integer("source_line"),
+    category: text("category").notNull(),
+    sessions_relevant: integer("sessions_relevant").notNull().default(0),
+    sessions_followed: integer("sessions_followed").notNull().default(0),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("claude_md_directives_repo_id_idx").on(table.repo_id),
+    index("claude_md_directives_workspace_id_idx").on(table.workspace_id),
+  ]
+);
+
+export const run_mcp_usage = pgTable(
+  "run_mcp_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    mcp_server: text("mcp_server").notNull(),
+    tool_calls: integer("tool_calls").notNull().default(0),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("run_mcp_usage_repo_id_mcp_server_idx").on(
+      table.repo_id,
+      table.mcp_server
+    ),
+    uniqueIndex("run_mcp_usage_run_id_mcp_server_idx").on(
+      table.run_id,
+      table.mcp_server
+    ),
+  ]
+);
+
+// ── MCP Visibility & Compliance ───────────────────────
+
+export const mcpStatusEnum = pgEnum("mcp_status", [
+  "pending",
+  "approved",
+  "flagged",
+  "blocked",
+]);
+
+export const mcpTransportEnum = pgEnum("mcp_transport", [
+  "http",
+  "sse",
+  "stdio",
+]);
+
+export const mcpAlertTypeEnum = pgEnum("mcp_alert_type", [
+  "new_mcp_discovered",
+  "blocked_mcp_usage",
+  "error_rate_spike",
+  "mcp_in_new_repo",
+]);
+
+export const mcpAlertSeverityEnum = pgEnum("mcp_alert_severity", [
+  "info",
+  "low",
+  "medium",
+  "high",
+]);
+
+export const workspace_mcps = pgTable(
+  "workspace_mcps",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    canonical_id: text("canonical_id").notNull(),
+    transport: mcpTransportEnum("transport").notNull(),
+    display_name: text("display_name"),
+    description: text("description"),
+    status: mcpStatusEnum("status").notNull().default("pending"),
+    setup_guidance: text("setup_guidance"),
+    status_note: text("status_note"),
+    status_changed_by: text("status_changed_by"),
+    status_changed_at: timestamp("status_changed_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    first_seen_at: timestamp("first_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_seen_at: timestamp("last_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("workspace_mcps_workspace_canonical_idx").on(
+      table.workspace_id,
+      table.canonical_id
+    ),
+    index("workspace_mcps_workspace_id_idx").on(table.workspace_id),
+    index("workspace_mcps_workspace_status_idx").on(
+      table.workspace_id,
+      table.status
+    ),
+  ]
+);
+
+export const mcp_aliases = pgTable(
+  "mcp_aliases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_mcp_id: uuid("workspace_mcp_id")
+      .notNull()
+      .references(() => workspace_mcps.id, { onDelete: "cascade" }),
+    alias: text("alias").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("mcp_aliases_mcp_alias_idx").on(
+      table.workspace_mcp_id,
+      table.alias
+    ),
+    index("mcp_aliases_alias_idx").on(table.alias),
+  ]
+);
+
+export const mcp_tools = pgTable(
+  "mcp_tools",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_mcp_id: uuid("workspace_mcp_id")
+      .notNull()
+      .references(() => workspace_mcps.id, { onDelete: "cascade" }),
+    tool_name: text("tool_name").notNull(),
+    call_count: integer("call_count").notNull().default(0),
+    error_count: integer("error_count").notNull().default(0),
+    first_seen_at: timestamp("first_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    last_seen_at: timestamp("last_seen_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("mcp_tools_mcp_tool_idx").on(
+      table.workspace_mcp_id,
+      table.tool_name
+    ),
+  ]
+);
+
+export const mcp_usage = pgTable(
+  "mcp_usage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workspace_mcp_id: uuid("workspace_mcp_id")
+      .notNull()
+      .references(() => workspace_mcps.id, { onDelete: "cascade" }),
+    mcp_tool_id: uuid("mcp_tool_id").references(() => mcp_tools.id),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    event_id: uuid("event_id").references(() => events.id),
+    repo_id: uuid("repo_id").references(() => repos.id),
+    developer_entity_id: uuid("developer_entity_id").references(
+      () => developers.id
+    ),
+    tool_name: text("tool_name").notNull(),
+    is_error: boolean("is_error").notNull().default(false),
+    occurred_at: timestamp("occurred_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+  },
+  (table) => [
+    index("mcp_usage_workspace_mcp_id_occurred_at_idx").on(
+      table.workspace_mcp_id,
+      table.occurred_at
+    ),
+    index("mcp_usage_workspace_id_occurred_at_idx").on(
+      table.workspace_id,
+      table.occurred_at
+    ),
+    index("mcp_usage_run_id_idx").on(table.run_id),
+  ]
+);
+
+export const mcp_alerts = pgTable(
+  "mcp_alerts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    workspace_mcp_id: uuid("workspace_mcp_id").references(
+      () => workspace_mcps.id,
+      { onDelete: "cascade" }
+    ),
+    alert_type: mcpAlertTypeEnum("alert_type").notNull(),
+    severity: mcpAlertSeverityEnum("severity").notNull(),
+    title: text("title").notNull(),
+    detail: text("detail"),
+    context: jsonb("context")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
+    acknowledged: boolean("acknowledged").notNull().default(false),
+    acknowledged_by: text("acknowledged_by"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("mcp_alerts_workspace_id_ack_created_idx").on(
+      table.workspace_id,
+      table.acknowledged,
+      table.created_at
+    ),
+    index("mcp_alerts_workspace_mcp_id_idx").on(table.workspace_mcp_id),
+  ]
+);
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),

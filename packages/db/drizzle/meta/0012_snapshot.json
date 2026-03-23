@@ -1,6 +1,6 @@
 {
-  "id": "cd3901d7-5c1e-4399-920f-40b704afae23",
-  "prevId": "5b5f358b-e369-4b17-885a-f786ed44f340",
+  "id": "132c82cc-512e-49a5-a9d9-c3fed91d8841",
+  "prevId": "cd3901d7-5c1e-4399-920f-40b704afae23",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1802,17 +1802,23 @@
           "method": "btree",
           "with": {}
         },
-        "run_mcp_usage_run_id_idx": {
-          "name": "run_mcp_usage_run_id_idx",
+        "run_mcp_usage_run_id_mcp_server_idx": {
+          "name": "run_mcp_usage_run_id_mcp_server_idx",
           "columns": [
             {
               "expression": "run_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
+            },
+            {
+              "expression": "mcp_server",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
             }
           ],
-          "isUnique": false,
+          "isUnique": true,
           "concurrently": false,
           "method": "btree",
           "with": {}

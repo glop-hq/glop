@@ -2,6 +2,7 @@ import { execFileSync } from "child_process";
 import fs from "fs";
 import path from "path";
 import type { CheckResult } from "./scan-checks.js";
+import { checkClaudeMdQuality, generateClaudeMdContent } from "./scan-claude-md.js";
 
 function readFileContent(repoRoot: string, ...segments: string[]): string | null {
   try {
@@ -12,7 +13,6 @@ function readFileContent(repoRoot: string, ...segments: string[]): string | null
 }
 
 interface QualityScores {
-  claude_md_quality: { score: number; reasoning: string };
   verification_setup: { score: number; reasoning: string };
   setup_instructions: { score: number; reasoning: string };
 }
@@ -24,30 +24,23 @@ function buildPrompt(claudeMd: string | null, readme: string | null): string {
     "",
     "Return ONLY valid JSON (no markdown fences, no explanation) in this exact format:",
     '{',
-    '  "claude_md_quality": { "score": <0-15>, "reasoning": "<one sentence>" },',
-    '  "verification_setup": { "score": <0-15>, "reasoning": "<one sentence>" },',
-    '  "setup_instructions": { "score": <0-10>, "reasoning": "<one sentence>" }',
+    '  "verification_setup": { "score": <0-10>, "reasoning": "<one sentence>" },',
+    '  "setup_instructions": { "score": <0-5>, "reasoning": "<one sentence>" }',
     '}',
     "",
     "Scoring criteria:",
     "",
-    "claude_md_quality (0-15): Score the CLAUDE.md content depth.",
-    "  0 = missing or empty",
-    "  1-5 = exists but very thin (just a title or one sentence)",
-    "  6-10 = has some useful info but missing key sections",
-    "  11-15 = comprehensive: project description, conventions, build/test/lint commands, architecture notes",
-    "",
-    "verification_setup (0-15): Score whether lint/test/build commands are documented and seem runnable.",
+    "verification_setup (0-10): Score whether lint/test/build commands are documented and seem runnable.",
     "  0 = no verification commands found anywhere",
-    "  1-5 = commands mentioned but incomplete or unclear",
-    "  6-10 = main commands documented (e.g. test command) but missing some",
-    "  11-15 = comprehensive: lint, test, build, and type-check commands all clearly documented",
+    "  1-3 = commands mentioned but incomplete or unclear",
+    "  4-7 = main commands documented (e.g. test command) but missing some",
+    "  8-10 = comprehensive: lint, test, build, and type-check commands all clearly documented",
     "",
-    "setup_instructions (0-10): Score setup/install instructions quality.",
+    "setup_instructions (0-5): Score setup/install instructions quality.",
     "  0 = no setup instructions found",
-    "  1-3 = very basic (just 'npm install')",
-    "  4-7 = covers install + some config but missing steps",
-    "  8-10 = comprehensive: prerequisites, install, config, env setup, first run",
+    "  1-2 = very basic (just 'npm install')",
+    "  3-4 = covers install + some config but missing steps",
+    "  5 = comprehensive: prerequisites, install, config, env setup, first run",
     "",
     "=== CLAUDE.md ===",
     claudeMd || "(file not found)",
@@ -60,28 +53,22 @@ function buildPrompt(claudeMd: string | null, readme: string | null): string {
 
 function parseQualityResponse(output: string): QualityScores | null {
   try {
-    // Try to extract JSON from the output (in case of extra text)
     const jsonMatch = output.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return null;
     const parsed = JSON.parse(jsonMatch[0]);
 
-    // Validate and clamp scores
     const clamp = (val: unknown, max: number): number => {
       const n = typeof val === "number" ? val : 0;
       return Math.max(0, Math.min(max, Math.round(n)));
     };
 
     return {
-      claude_md_quality: {
-        score: clamp(parsed.claude_md_quality?.score, 15),
-        reasoning: String(parsed.claude_md_quality?.reasoning || ""),
-      },
       verification_setup: {
-        score: clamp(parsed.verification_setup?.score, 15),
+        score: clamp(parsed.verification_setup?.score, 10),
         reasoning: String(parsed.verification_setup?.reasoning || ""),
       },
       setup_instructions: {
-        score: clamp(parsed.setup_instructions?.score, 10),
+        score: clamp(parsed.setup_instructions?.score, 5),
         reasoning: String(parsed.setup_instructions?.reasoning || ""),
       },
     };
@@ -149,27 +136,24 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
   const claudeMd = readFileContent(repoRoot, "CLAUDE.md");
   const readme = readFileContent(repoRoot, "README.md");
 
-  // If neither file exists, all quality checks fail with score 0
+  // 1. CLAUDE.md deep quality scoring (deterministic — no Claude CLI needed)
+  const claudeMdCheck = checkClaudeMdQuality(repoRoot, 10);
+
+  // If claude_md_quality fails and fix is available, generate suggested content
+  if (claudeMdCheck.status !== "pass") {
+    const suggestedContent = generateClaudeMdContent(repoRoot);
+    (claudeMdCheck.details as Record<string, unknown>).suggested_content = suggestedContent;
+  }
+
+  // If neither file exists, skip AI quality checks
   if (!claudeMd && !readme) {
     return [
-      {
-        check_id: "claude_md_quality",
-        status: "fail",
-        severity: "critical",
-        weight: 15,
-        score: 0,
-        title: "CLAUDE.md quality — insufficient",
-        description: "No CLAUDE.md or README.md found to assess quality.",
-        recommendation:
-          "Add a CLAUDE.md with project description, conventions, and build/test/lint commands.",
-        fix_available: true,
-        details: {},
-      },
+      claudeMdCheck,
       {
         check_id: "verification_setup",
         status: "fail",
         severity: "critical",
-        weight: 15,
+        weight: 10,
         score: 0,
         title: "Verification setup — insufficient",
         description: "No documentation found for lint/test/build commands.",
@@ -182,7 +166,7 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
         check_id: "setup_instructions",
         status: "fail",
         severity: "warning",
-        weight: 10,
+        weight: 5,
         score: 0,
         title: "Setup instructions — insufficient",
         description: "No setup or install instructions found.",
@@ -194,7 +178,7 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
     ];
   }
 
-  // Try Claude CLI
+  // 2. AI-powered checks for verification_setup and setup_instructions
   try {
     const prompt = buildPrompt(claudeMd, readme);
     const output = execFileSync("claude", ["-p", prompt], {
@@ -205,27 +189,19 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
 
     const scores = parseQualityResponse(output);
     if (!scores) {
-      // Claude responded but with unparseable output — skip
       return [
-        skipResult("claude_md_quality", "critical", 15, "CLAUDE.md quality"),
-        skipResult("verification_setup", "critical", 15, "Verification setup"),
-        skipResult("setup_instructions", "warning", 10, "Setup instructions"),
+        claudeMdCheck,
+        skipResult("verification_setup", "critical", 10, "Verification setup"),
+        skipResult("setup_instructions", "warning", 5, "Setup instructions"),
       ];
     }
 
     return [
-      qualityToCheck(
-        "claude_md_quality",
-        "critical",
-        15,
-        "CLAUDE.md quality",
-        scores.claude_md_quality,
-        true
-      ),
+      claudeMdCheck,
       qualityToCheck(
         "verification_setup",
         "critical",
-        15,
+        10,
         "Verification setup",
         scores.verification_setup,
         true
@@ -233,18 +209,17 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
       qualityToCheck(
         "setup_instructions",
         "warning",
-        10,
+        5,
         "Setup instructions",
         scores.setup_instructions,
         true
       ),
     ];
   } catch {
-    // Claude CLI not available or timed out — skip quality checks
     return [
-      skipResult("claude_md_quality", "critical", 15, "CLAUDE.md quality"),
-      skipResult("verification_setup", "critical", 15, "Verification setup"),
-      skipResult("setup_instructions", "warning", 10, "Setup instructions"),
+      claudeMdCheck,
+      skipResult("verification_setup", "critical", 10, "Verification setup"),
+      skipResult("setup_instructions", "warning", 5, "Setup instructions"),
     ];
   }
 }
