@@ -6,6 +6,7 @@ import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useRepoDashboard } from "@/hooks/use-repo-dashboard";
+import { useRepoStandardsUsage } from "@/hooks/use-repo-standards-usage";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -113,6 +114,8 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
     repoId,
     period
   );
+  const { data: standardsData, loading: standardsLoading } =
+    useRepoStandardsUsage(currentWorkspace?.id, repoId, period);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
@@ -324,6 +327,77 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Standards Usage */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">
+            Standards Usage
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {standardsLoading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : !standardsData || standardsData.standards.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No skills or commands used in this period
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left text-muted-foreground">
+                    <th className="pb-2 pr-4 font-medium">Name</th>
+                    <th className="pb-2 pr-4 font-medium">Type</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Invocations</th>
+                    <th className="pb-2 pr-4 font-medium text-right">Developers</th>
+                    <th className="pb-2 font-medium text-right">Effectiveness</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {standardsData.standards.map((s) => (
+                    <tr
+                      key={`${s.standard_name}-${s.standard_type}`}
+                      className="border-b last:border-0"
+                    >
+                      <td className="py-2 pr-4 font-medium">{s.standard_name}</td>
+                      <td className="py-2 pr-4">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium capitalize">
+                          {s.standard_type}
+                        </span>
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {s.invocation_count}
+                      </td>
+                      <td className="py-2 pr-4 text-right tabular-nums">
+                        {s.unique_developers}
+                      </td>
+                      <td className="py-2 text-right tabular-nums">
+                        {s.effectiveness_score != null ? (
+                          <span
+                            className={cn(
+                              "font-medium",
+                              s.effectiveness_score >= 70
+                                ? "text-green-600 dark:text-green-400"
+                                : s.effectiveness_score >= 40
+                                  ? "text-yellow-600 dark:text-yellow-400"
+                                  : "text-muted-foreground"
+                            )}
+                          >
+                            {s.effectiveness_score}%
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Activity Timeline */}
       <Card>
