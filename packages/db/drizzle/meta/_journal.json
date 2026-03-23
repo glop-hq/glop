@@ -127,6 +127,13 @@
       "when": 1774302025862,
       "tag": "0017_absent_starjammers",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1774306198112,
+      "tag": "0018_pale_marvel_apes",
+      "breakpoints": true
     }
   ]
 }

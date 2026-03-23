@@ -383,3 +383,48 @@ export const suggestionStatusUpdateSchema = z.object({
     .enum(["not_relevant", "already_handled", "will_do_later"])
     .optional(),
 });
+
+// ── Coaching Tips (PRD 11) ──────────────────────────────────────
+
+export const coachingSourceTypeSchema = z.enum([
+  "repo_insight",
+  "readiness",
+  "facet_pattern",
+  "context_health",
+  "claude_md",
+  "standard",
+  "curated",
+]);
+
+export const tipActionTypeSchema = z.enum([
+  "copy_to_clipboard",
+  "open_link",
+  "dismiss",
+]);
+
+export const tipPrioritySchema = z.enum(["high", "medium", "low"]);
+
+export const tipStatusSchema = z.enum([
+  "active",
+  "delivered",
+  "engaged",
+  "dismissed",
+  "expired",
+]);
+
+export const coachingTipQuerySchema = z.object({
+  workspace_id: z.string().uuid(),
+  developer_id: z.string().uuid().optional(),
+  repo_key: z.string().optional(),
+  channel: z.enum(["cli", "dashboard"]).optional(),
+  status: tipStatusSchema.optional(),
+});
+
+export const coachingTipUpdateSchema = z.object({
+  status: z.enum(["delivered", "engaged", "dismissed"]),
+  dismiss_reason: z.string().max(500).optional(),
+});
+
+export const coachingGenerateSchema = z.object({
+  workspace_id: z.string().uuid(),
+});

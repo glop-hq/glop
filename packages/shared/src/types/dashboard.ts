@@ -333,3 +333,57 @@ export interface SuggestionsSummary {
   by_type: Record<string, number>;
   top_suggestions: SuggestionSummaryItem[];
 }
+
+// ── Coaching Tips (PRD 11) ──────────────────────────────────────
+
+export type CoachingSourceType =
+  | "repo_insight"
+  | "readiness"
+  | "facet_pattern"
+  | "context_health"
+  | "claude_md"
+  | "standard"
+  | "curated";
+
+export type TipActionType = "copy_to_clipboard" | "open_link" | "dismiss";
+export type TipPriority = "high" | "medium" | "low";
+export type TipStatus = "active" | "delivered" | "engaged" | "dismissed" | "expired";
+
+export interface CoachingTip {
+  id: string;
+  developer_id: string;
+  repo_id: string | null;
+  workspace_id: string;
+  source_type: CoachingSourceType;
+  source_id: string | null;
+  title: string;
+  body: string;
+  action_type: TipActionType;
+  action_payload: string | null;
+  priority: TipPriority;
+  status: TipStatus;
+  delivered_via: string | null;
+  delivered_at: string | null;
+  engaged_at: string | null;
+  dismissed_at: string | null;
+  dismiss_reason: string | null;
+  expires_at: string;
+  created_at: string;
+  // Joined fields
+  repo_key?: string;
+  repo_display_name?: string | null;
+}
+
+export interface CoachingTipsSummary {
+  total_active: number;
+  by_source: Record<string, number>;
+  top_tips: CoachingTip[];
+}
+
+export interface CoachingEffectiveness {
+  tips_delivered: number;
+  tips_engaged: number;
+  tips_dismissed: number;
+  engagement_rate: number;
+  dismissal_rate: number;
+}
