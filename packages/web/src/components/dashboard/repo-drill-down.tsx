@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useRepoDashboard } from "@/hooks/use-repo-dashboard";
 import { useRepoStandardsUsage } from "@/hooks/use-repo-standards-usage";
+import { useRepoPermissions } from "@/hooks/use-repo-permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -116,6 +117,12 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
   );
   const { data: standardsData, loading: standardsLoading } =
     useRepoStandardsUsage(currentWorkspace?.id, repoId, period);
+  const {
+    data: permissionsData,
+    loading: permissionsLoading,
+    analyze: analyzePermissions,
+  } = useRepoPermissions(currentWorkspace?.id, repoId);
+  const [configCopied, setConfigCopied] = useState(false);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
@@ -394,6 +401,138 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Permission Recommendations */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm font-medium">
+              Permission Recommendations
+            </CardTitle>
+            <div className="flex gap-2">
+              <button
+                onClick={analyzePermissions}
+                className="cursor-pointer rounded-md border px-3 py-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+              >
+                Refresh Analysis
+              </button>
+              {permissionsData &&
+                permissionsData.summary.auto_allow_count > 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const res = await fetch(
+                          `/api/v1/repos/${repoId}/permissions/config`
+                        );
+                        if (!res.ok) return;
+                        const json = await res.json();
+                        await navigator.clipboard.writeText(
+                          JSON.stringify(json.data.config, null, 2)
+                        );
+                        setConfigCopied(true);
+                        setTimeout(() => setConfigCopied(false), 2000);
+                      } catch {
+                        // Clipboard or fetch failure — silently ignore
+                      }
+                    }}
+                    className="cursor-pointer rounded-md border bg-foreground px-3 py-1 text-xs font-medium text-background transition-colors hover:bg-foreground/90"
+                  >
+                    {configCopied ? "Copied!" : "Copy Config"}
+                  </button>
+                )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {permissionsLoading ? (
+            <Skeleton className="h-32 w-full" />
+          ) : !permissionsData ||
+            permissionsData.recommendations.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No permission data yet. Permission patterns are collected from
+              tool usage — recommendations will appear once enough data is
+              gathered.
+            </p>
+          ) : (
+            <div className="space-y-4">
+              {permissionsData.summary.est_weekly_savings_sec > 0 && (
+                <div className="rounded-md border border-green-200 bg-green-50 px-4 py-3 dark:border-green-900 dark:bg-green-950">
+                  <p className="text-sm font-medium text-green-800 dark:text-green-200">
+                    Adopting recommended permissions would save ~
+                    {Math.round(
+                      permissionsData.summary.est_weekly_savings_sec / 60
+                    )}{" "}
+                    min/dev/week
+                  </p>
+                  <p className="text-xs text-green-700 dark:text-green-300">
+                    Based on {permissionsData.summary.auto_allow_count}{" "}
+                    high-confidence patterns developers approve &gt;95% of the
+                    time
+                  </p>
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-muted-foreground">
+                      <th className="pb-2 pr-4 font-medium">Pattern</th>
+                      <th className="pb-2 pr-4 font-medium">Tier</th>
+                      <th className="pb-2 pr-4 font-medium text-right">
+                        Frequency
+                      </th>
+                      <th className="pb-2 pr-4 font-medium text-right">
+                        Consensus
+                      </th>
+                      <th className="pb-2 font-medium text-right">
+                        Time Saved/wk
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {permissionsData.recommendations.map((r) => (
+                      <tr
+                        key={r.id}
+                        className="border-b last:border-0"
+                      >
+                        <td className="py-2 pr-4 font-mono text-xs">
+                          {r.pattern}
+                        </td>
+                        <td className="py-2 pr-4">
+                          <span
+                            className={cn(
+                              "rounded-full px-2 py-0.5 text-xs font-medium",
+                              r.tier === "auto_allow"
+                                ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
+                                : r.tier === "consider"
+                                  ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+                                  : r.tier === "auto_deny"
+                                    ? "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
+                                    : "bg-muted text-muted-foreground"
+                            )}
+                          >
+                            {r.tier.replace(/_/g, " ")}
+                          </span>
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {r.frequency}
+                        </td>
+                        <td className="py-2 pr-4 text-right tabular-nums">
+                          {Math.round(r.developer_consensus * 100)}%
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {r.est_time_saved_sec > 0
+                            ? `${Math.round(r.est_time_saved_sec / 60)}m`
+                            : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>

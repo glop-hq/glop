@@ -12,6 +12,7 @@ import { extractBashOutput, extractCommitArtifact, extractPrArtifact } from "./a
 import { resolveOrCreateDeveloper, resolveOrCreateRepo } from "./entity-resolver";
 import { recordMcpUsage } from "./mcp-usage";
 import { recordStandardUsage } from "./standard-usage";
+import { recordPermissionEvent } from "./permission-tracker";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -475,6 +476,26 @@ export async function processHook(
       } catch (err) {
         console.error("Standard usage recording error (agent):", err);
       }
+    }
+  }
+
+  // ── Permission event tracking (PRD 12) ──
+  // PostToolUse means the tool was approved and executed
+  if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string" && repoId) {
+    const toolInput = (rawPayload.tool_input ?? {}) as Record<string, unknown>;
+    try {
+      await recordPermissionEvent(db, ctx.workspace_id, {
+        run_id: runId,
+        event_id: eventId,
+        repo_id: repoId,
+        developer_id: ctx.developer_id,
+        tool_name: rawPayload.tool_name as string,
+        tool_input: toolInput,
+        occurred_at: now,
+      });
+    } catch (err) {
+      // Permission tracking is best-effort — don't fail the hook
+      console.error("Permission event recording error:", err);
     }
   }
 

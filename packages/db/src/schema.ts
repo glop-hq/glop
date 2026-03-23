@@ -1192,3 +1192,73 @@ export const api_keys = pgTable("api_keys", {
     withTimezone: true,
   }).notNull(),
 });
+
+// ── Permission Optimization (PRD 12) ────────────────────────────
+
+export const permission_events = pgTable(
+  "permission_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id),
+    event_id: uuid("event_id").references(() => events.id),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    developer_id: text("developer_id").notNull(),
+    tool_name: text("tool_name").notNull(),
+    tool_args: text("tool_args"),
+    pattern: text("pattern").notNull(),
+    outcome: text("outcome").notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("permission_events_repo_pattern_created_idx").on(
+      table.repo_id,
+      table.pattern,
+      table.created_at
+    ),
+    index("permission_events_workspace_id_idx").on(table.workspace_id),
+    index("permission_events_run_id_idx").on(table.run_id),
+  ]
+);
+
+export const permission_recommendations = pgTable(
+  "permission_recommendations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    pattern: text("pattern").notNull(),
+    tier: text("tier").notNull(),
+    approval_rate: real("approval_rate").notNull(),
+    frequency: integer("frequency").notNull(),
+    developer_consensus: real("developer_consensus").notNull(),
+    est_time_saved_sec: integer("est_time_saved_sec").notNull().default(0),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("permission_recommendations_repo_tier_idx").on(
+      table.repo_id,
+      table.tier
+    ),
+    index("permission_recommendations_workspace_id_idx").on(
+      table.workspace_id
+    ),
+  ]
+);
