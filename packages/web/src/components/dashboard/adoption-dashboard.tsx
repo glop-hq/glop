@@ -210,7 +210,7 @@ export function AdoptionDashboard() {
       </ChartCard>
 
       {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-3">
         <Link
           href="/dashboard/insights"
           className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
@@ -227,6 +227,15 @@ export function AdoptionDashboard() {
           <p className="font-medium">AI Contributions</p>
           <p className="text-sm text-muted-foreground">
             Commits and PRs produced via Glop sessions
+          </p>
+        </Link>
+        <Link
+          href="/dashboard/context-health"
+          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
+        >
+          <p className="font-medium">Context Health</p>
+          <p className="text-sm text-muted-foreground">
+            Compaction rates and session length recommendations
           </p>
         </Link>
       </div>

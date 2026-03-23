@@ -157,6 +157,55 @@ export interface ContributionsResponse {
   by_repo: RepoContribution[];
 }
 
+// ── Context Health ────────────────────────────────────────────────
+
+export interface RunContextHealth {
+  run_id: string;
+  compaction_count: number;
+  first_compaction_at_min: number | null;
+  peak_utilization_pct: number | null;
+  end_utilization_pct: number | null;
+  total_input_tokens: number | null;
+  total_output_tokens: number | null;
+  context_limit_tokens: number | null;
+}
+
+export interface ContextHealthTrendPoint {
+  date: string;
+  pct_compacted: number;
+  avg_compactions: number;
+}
+
+export interface ContextHealthSummary {
+  pct_sessions_compacted: number;
+  avg_compactions_per_session: number;
+  avg_duration_before_first_compaction_min: number | null;
+  avg_peak_utilization_pct: number | null;
+  pct_sessions_above_80: number | null;
+  total_sessions_with_data: number;
+  trend: ContextHealthTrendPoint[];
+}
+
+export interface RepoContextHealthRow extends ContextHealthSummary {
+  repo_id: string;
+  repo_key: string;
+}
+
+export interface RepoContextRecommendation {
+  repo_id: string;
+  recommended_max_duration_min: number | null;
+  confidence: string;
+  sample_size: number;
+  reasoning: string | null;
+}
+
+export interface ContextHealthResponse {
+  period: AnalyticsPeriod;
+  summary: ContextHealthSummary;
+  by_repo: RepoContextHealthRow[];
+  recommendations: RepoContextRecommendation[];
+}
+
 // ── Digest Schedules ───────────────────────────────────────────────
 
 export type DigestFrequency = "weekly" | "biweekly" | "monthly" | "disabled";

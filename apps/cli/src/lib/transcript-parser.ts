@@ -3,6 +3,74 @@ export interface TranscriptMessage {
   content: string;
 }
 
+export interface ContextHealthStats {
+  peak_input_tokens: number;
+  end_input_tokens: number;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  compaction_count: number;
+}
+
+/**
+ * Extract context health stats from a raw JSONL transcript.
+ *
+ * Each assistant message line contains:
+ *   message.usage.input_tokens  — tokens in the prompt for that API call
+ *     (grows each turn as conversation history is resent, so it reflects
+ *      context window utilization at that moment)
+ *   message.usage.output_tokens — tokens generated in the response
+ *
+ * Compaction is detected as a significant drop (>30%) in input_tokens
+ * between consecutive assistant messages.
+ */
+export function extractContextHealth(raw: string): ContextHealthStats | null {
+  let peakInput = 0;
+  let lastInput = 0;
+  let totalInput = 0;
+  let totalOutput = 0;
+  let compactionCount = 0;
+  let prevInput = 0;
+  let messageCount = 0;
+
+  for (const line of raw.split("\n")) {
+    if (!line.trim()) continue;
+    try {
+      const obj = JSON.parse(line);
+      if (obj.type !== "assistant") continue;
+
+      const usage = obj.message?.usage;
+      if (!usage || typeof usage.input_tokens !== "number") continue;
+
+      const inputTokens = usage.input_tokens;
+      const outputTokens = typeof usage.output_tokens === "number" ? usage.output_tokens : 0;
+
+      // Detect compaction: input_tokens drops >30% from previous message
+      if (messageCount > 0 && prevInput > 0 && inputTokens < prevInput * 0.7) {
+        compactionCount++;
+      }
+
+      if (inputTokens > peakInput) peakInput = inputTokens;
+      lastInput = inputTokens;
+      totalInput += inputTokens;
+      totalOutput += outputTokens;
+      prevInput = inputTokens;
+      messageCount++;
+    } catch {
+      // Skip unparseable lines
+    }
+  }
+
+  if (messageCount === 0) return null;
+
+  return {
+    peak_input_tokens: peakInput,
+    end_input_tokens: lastInput,
+    total_input_tokens: totalInput,
+    total_output_tokens: totalOutput,
+    compaction_count: compactionCount,
+  };
+}
+
 function extractText(content: unknown): string | null {
   if (typeof content === "string") return content;
   if (Array.isArray(content)) {

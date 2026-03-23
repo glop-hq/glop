@@ -810,6 +810,69 @@ export const digest_schedules = pgTable(
   ]
 );
 
+// ── Context Health ────────────────────────────────────
+
+export const run_context_health = pgTable(
+  "run_context_health",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    run_id: uuid("run_id")
+      .notNull()
+      .references(() => runs.id)
+      .unique(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    compaction_count: integer("compaction_count").notNull().default(0),
+    first_compaction_at_min: real("first_compaction_at_min"),
+    peak_utilization_pct: real("peak_utilization_pct"),
+    end_utilization_pct: real("end_utilization_pct"),
+    total_input_tokens: integer("total_input_tokens"),
+    total_output_tokens: integer("total_output_tokens"),
+    context_limit_tokens: integer("context_limit_tokens"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("run_context_health_repo_id_created_at_idx").on(
+      table.repo_id,
+      table.created_at
+    ),
+    index("run_context_health_workspace_id_created_at_idx").on(
+      table.workspace_id,
+      table.created_at
+    ),
+  ]
+);
+
+export const repo_context_recommendations = pgTable(
+  "repo_context_recommendations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    repo_id: uuid("repo_id")
+      .notNull()
+      .references(() => repos.id, { onDelete: "cascade" })
+      .unique(),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id),
+    recommended_max_duration_min: integer("recommended_max_duration_min"),
+    confidence: text("confidence").notNull(),
+    sample_size: integer("sample_size").notNull(),
+    reasoning: text("reasoning"),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updated_at: timestamp("updated_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  }
+);
+
 export const api_keys = pgTable("api_keys", {
   id: uuid("id").primaryKey(),
   key_hash: text("key_hash").notNull().unique(),
