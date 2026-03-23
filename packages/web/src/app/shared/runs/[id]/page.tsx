@@ -34,7 +34,7 @@ export default function SharedRunPage({
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-4 text-muted-foreground">
         <AlertTriangle className="h-8 w-8" />

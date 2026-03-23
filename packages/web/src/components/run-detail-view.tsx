@@ -52,7 +52,7 @@ export function RunDetailView({ runId }: { runId: string }) {
     );
   }
 
-  if (error || !data) {
+  if (!data) {
     return (
       <div className="flex items-center justify-center p-12 text-muted-foreground">
         <p>Failed to load run: {error || "Not found"}</p>
