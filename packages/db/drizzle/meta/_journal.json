@@ -92,6 +92,13 @@
       "when": 1774238318714,
       "tag": "0012_reflective_warstar",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1774242116434,
+      "tag": "0013_dry_rattler",
+      "breakpoints": true
     }
   ]
 }

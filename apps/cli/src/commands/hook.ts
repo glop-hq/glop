@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import path from "path";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
+import { readMcpConfigs } from "../lib/mcp-config.js";
 
 const PR_URL_RE = /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/;
 
@@ -171,6 +172,31 @@ export const hookCommand = new Command("__hook")
           }
         } catch {
           // Silently ignore — scan is best-effort
+        }
+      }
+
+      // Sync MCP configs on SessionStart (best-effort)
+      if (payload.hook_event_name === "SessionStart" && res.ok) {
+        try {
+          const repoRoot = getRepoRoot();
+          const mcps = readMcpConfigs(repoRoot ?? undefined);
+          if (mcps.length > 0) {
+            await fetch(`${config.server_url}/api/v1/mcps/sync`, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${config.api_key}`,
+              },
+              body: JSON.stringify({
+                workspace_id: repoConfig.workspace_id,
+                repo_key: payload.repo_key,
+                mcps,
+              }),
+              signal: AbortSignal.timeout(3000),
+            });
+          }
+        } catch {
+          // Silently ignore — MCP sync is best-effort
         }
       }
 

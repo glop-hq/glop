@@ -180,6 +180,49 @@ export const developerMergeSchema = z.object({
   target_id: z.string().uuid(),
 });
 
+// ── MCP Visibility & Compliance ──────────────────────────────────
+
+export const mcpSyncSchema = z.object({
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  mcps: z.array(
+    z.object({
+      server_name: z.string().min(1),
+      canonical_id: z.string().min(1),
+      transport: z.enum(["http", "sse", "stdio"]),
+    })
+  ),
+});
+
+export const mcpStatusUpdateSchema = z.object({
+  workspace_id: z.string().uuid(),
+  status: z.enum(["pending", "approved", "flagged", "blocked"]),
+  display_name: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  setup_guidance: z.string().max(5000).optional(),
+  status_note: z.string().max(1000).optional(),
+});
+
+export const mcpCreateSchema = z.object({
+  workspace_id: z.string().uuid(),
+  canonical_id: z.string().min(1),
+  transport: z.enum(["http", "sse", "stdio"]),
+  display_name: z.string().max(200).optional(),
+  description: z.string().max(2000).optional(),
+  status: z.enum(["pending", "approved", "flagged", "blocked"]).default("approved"),
+  setup_guidance: z.string().max(5000).optional(),
+});
+
+export const mcpQuerySchema = z.object({
+  workspace_id: z.string().uuid(),
+  status: z.enum(["pending", "approved", "flagged", "blocked"]).optional(),
+  period: analyticsPeriodSchema.default("30d"),
+});
+
+export const mcpAlertAcknowledgeSchema = z.object({
+  workspace_id: z.string().uuid(),
+});
+
 export const repoUpdateSchema = z.object({
   display_name: z.string().min(1).max(200).optional(),
   description: z.string().max(1000).optional(),
