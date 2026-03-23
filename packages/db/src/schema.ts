@@ -1330,3 +1330,104 @@ export const permission_recommendations = pgTable(
     ),
   ]
 );
+
+// ── Contextual Developer Coaching (PRD 11) ──────────────────────
+
+export const coachingSourceTypeEnum = pgEnum("coaching_source_type", [
+  "repo_insight",
+  "readiness",
+  "facet_pattern",
+  "context_health",
+  "claude_md",
+  "standard",
+  "curated",
+]);
+
+export const tipActionTypeEnum = pgEnum("tip_action_type", [
+  "copy_to_clipboard",
+  "open_link",
+  "dismiss",
+]);
+
+export const tipPriorityEnum = pgEnum("tip_priority", [
+  "high",
+  "medium",
+  "low",
+]);
+
+export const tipStatusEnum = pgEnum("tip_status", [
+  "active",
+  "delivered",
+  "engaged",
+  "dismissed",
+  "expired",
+]);
+
+export const coaching_tips = pgTable(
+  "coaching_tips",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    developer_id: uuid("developer_id")
+      .notNull()
+      .references(() => developers.id, { onDelete: "cascade" }),
+    repo_id: uuid("repo_id").references(() => repos.id, {
+      onDelete: "cascade",
+    }),
+    workspace_id: uuid("workspace_id")
+      .notNull()
+      .references(() => workspaces.id, { onDelete: "cascade" }),
+    source_type: coachingSourceTypeEnum("source_type").notNull(),
+    source_id: uuid("source_id"),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    action_type: tipActionTypeEnum("action_type").notNull(),
+    action_payload: text("action_payload"),
+    priority: tipPriorityEnum("priority").notNull(),
+    status: tipStatusEnum("status").notNull().default("active"),
+    delivered_via: text("delivered_via"),
+    delivered_at: timestamp("delivered_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    engaged_at: timestamp("engaged_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    dismissed_at: timestamp("dismissed_at", {
+      mode: "string",
+      withTimezone: true,
+    }),
+    dismiss_reason: text("dismiss_reason"),
+    expires_at: timestamp("expires_at", {
+      mode: "string",
+      withTimezone: true,
+    }).notNull(),
+    created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("coaching_tips_developer_status_idx").on(
+      table.developer_id,
+      table.status
+    ),
+    index("coaching_tips_repo_status_idx").on(table.repo_id, table.status),
+    index("coaching_tips_workspace_created_idx").on(
+      table.workspace_id,
+      table.created_at
+    ),
+  ]
+);
+
+export const curated_tips = pgTable("curated_tips", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  title: text("title").notNull(),
+  body: text("body").notNull(),
+  category: text("category").notNull(),
+  friction_match: text("friction_match"),
+  repo_type_match: text("repo_type_match"),
+  source_url: text("source_url"),
+  created_at: timestamp("created_at", { mode: "string", withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});

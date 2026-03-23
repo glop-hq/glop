@@ -211,6 +211,44 @@ export const hookCommand = new Command("__hook")
         }
       }
 
+      // Show coaching tip on SessionStart (once per day per repo)
+      if (payload.hook_event_name === "SessionStart" && res.ok) {
+        try {
+          const repoKey = payload.repo_key as string;
+          const tipFile = path.join(os.homedir(), ".config", "glop", "tip-timestamps.json");
+          let tipTimestamps: Record<string, string> = {};
+          if (existsSync(tipFile)) {
+            try { tipTimestamps = JSON.parse(readFileSync(tipFile, "utf-8")); } catch { /* ignore */ }
+          }
+          const lastTip = tipTimestamps[repoKey];
+          const oneDayAgo = Date.now() - 86_400_000;
+          if (!lastTip || new Date(lastTip).getTime() < oneDayAgo) {
+            const tipRes = await fetch(
+              `${config.server_url}/api/v1/coaching/tips?workspace_id=${repoConfig.workspace_id}&repo_key=${encodeURIComponent(repoKey)}&channel=cli`,
+              {
+                headers: { Authorization: `Bearer ${config.api_key}` },
+                signal: AbortSignal.timeout(3000),
+              }
+            );
+            if (tipRes.ok) {
+              const tipBody = (await tipRes.json()) as { data: Array<{ id: string; title: string; body: string }> };
+              if (tipBody.data && tipBody.data.length > 0) {
+                const tip = tipBody.data[0];
+                // Truncate body to 120 chars for CLI
+                const shortBody = tip.body.length > 120 ? tip.body.slice(0, 117) + "..." : tip.body;
+                console.log(`glop: 💡 ${tip.title} — ${shortBody}`);
+                tipTimestamps[repoKey] = new Date().toISOString();
+                const dir = path.dirname(tipFile);
+                if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+                writeFileSync(tipFile, JSON.stringify(tipTimestamps, null, 2));
+              }
+            }
+          }
+        } catch {
+          // Silently ignore — coaching tip is best-effort
+        }
+      }
+
       // Sync MCP configs on SessionStart (best-effort)
       if (payload.hook_event_name === "SessionStart" && res.ok) {
         try {

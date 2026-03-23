@@ -14,6 +14,7 @@ import { SessionOutcomeChart } from "./session-outcome-chart";
 import { RepoHeatmapChart } from "./repo-heatmap-chart";
 import { DigestSettings } from "./digest-settings";
 import { SuggestionsCard } from "./suggestions-card";
+import { CoachingTipsCard } from "./coaching-tips-card";
 import type { AnalyticsPeriod } from "@glop/shared";
 
 const periods: { value: AnalyticsPeriod; label: string }[] = [
@@ -210,8 +211,11 @@ export function AdoptionDashboard() {
         )}
       </ChartCard>
 
-      {/* Smart Suggestions */}
-      <SuggestionsCard workspaceId={currentWorkspace?.id} />
+      {/* Smart Suggestions & Coaching Tips */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <SuggestionsCard workspaceId={currentWorkspace?.id} />
+        <CoachingTipsCard workspaceId={currentWorkspace?.id} />
+      </div>
 
       {/* Quick Links */}
       <div className="grid gap-4 sm:grid-cols-5">
