@@ -1,5 +1,5 @@
 {
-  "id": "eb65c7dd-9ef4-4d57-8bc5-16a2e0cf27fb",
+  "id": "d7a847bc-9473-4360-8138-75880d7b5028",
   "prevId": "37975df9-adc4-45b8-93e3-19fb61c12089",
   "version": "7",
   "dialect": "postgresql",
@@ -1731,345 +1731,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.permission_events": {
-      "name": "permission_events",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "run_id": {
-          "name": "run_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "event_id": {
-          "name": "event_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "repo_id": {
-          "name": "repo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "developer_id": {
-          "name": "developer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tool_name": {
-          "name": "tool_name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tool_args": {
-          "name": "tool_args",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "pattern": {
-          "name": "pattern",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "outcome": {
-          "name": "outcome",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "permission_events_repo_pattern_created_idx": {
-          "name": "permission_events_repo_pattern_created_idx",
-          "columns": [
-            {
-              "expression": "repo_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "pattern",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "created_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "permission_events_workspace_id_idx": {
-          "name": "permission_events_workspace_id_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "permission_events_run_id_idx": {
-          "name": "permission_events_run_id_idx",
-          "columns": [
-            {
-              "expression": "run_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "permission_events_run_id_runs_id_fk": {
-          "name": "permission_events_run_id_runs_id_fk",
-          "tableFrom": "permission_events",
-          "tableTo": "runs",
-          "columnsFrom": [
-            "run_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "permission_events_event_id_events_id_fk": {
-          "name": "permission_events_event_id_events_id_fk",
-          "tableFrom": "permission_events",
-          "tableTo": "events",
-          "columnsFrom": [
-            "event_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        },
-        "permission_events_repo_id_repos_id_fk": {
-          "name": "permission_events_repo_id_repos_id_fk",
-          "tableFrom": "permission_events",
-          "tableTo": "repos",
-          "columnsFrom": [
-            "repo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "permission_events_workspace_id_workspaces_id_fk": {
-          "name": "permission_events_workspace_id_workspaces_id_fk",
-          "tableFrom": "permission_events",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "public.permission_recommendations": {
-      "name": "permission_recommendations",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "uuid",
-          "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
-        },
-        "repo_id": {
-          "name": "repo_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "pattern": {
-          "name": "pattern",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "tier": {
-          "name": "tier",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "approval_rate": {
-          "name": "approval_rate",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "frequency": {
-          "name": "frequency",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "developer_consensus": {
-          "name": "developer_consensus",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "est_time_saved_sec": {
-          "name": "est_time_saved_sec",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "permission_recommendations_repo_tier_idx": {
-          "name": "permission_recommendations_repo_tier_idx",
-          "columns": [
-            {
-              "expression": "repo_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "tier",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "permission_recommendations_workspace_id_idx": {
-          "name": "permission_recommendations_workspace_id_idx",
-          "columns": [
-            {
-              "expression": "workspace_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "permission_recommendations_repo_id_repos_id_fk": {
-          "name": "permission_recommendations_repo_id_repos_id_fk",
-          "tableFrom": "permission_recommendations",
-          "tableTo": "repos",
-          "columnsFrom": [
-            "repo_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "permission_recommendations_workspace_id_workspaces_id_fk": {
-          "name": "permission_recommendations_workspace_id_workspaces_id_fk",
-          "tableFrom": "permission_recommendations",
-          "tableTo": "workspaces",
-          "columnsFrom": [
-            "workspace_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.repo_context_recommendations": {
       "name": "repo_context_recommendations",
       "schema": "",
@@ -3764,6 +3425,198 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.standard_suggestions": {
+      "name": "standard_suggestions",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "repo_id": {
+          "name": "repo_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "suggestion_type": {
+          "name": "suggestion_type",
+          "type": "suggestion_type",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "title": {
+          "name": "title",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "rationale": {
+          "name": "rationale",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "draft_content": {
+          "name": "draft_content",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "draft_filename": {
+          "name": "draft_filename",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pattern_type": {
+          "name": "pattern_type",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "pattern_data": {
+          "name": "pattern_data",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'{}'::jsonb"
+        },
+        "status": {
+          "name": "status",
+          "type": "suggestion_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'active'"
+        },
+        "dismiss_reason": {
+          "name": "dismiss_reason",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "accepted_at": {
+          "name": "accepted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "dismissed_at": {
+          "name": "dismissed_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "standard_suggestions_repo_status_idx": {
+          "name": "standard_suggestions_repo_status_idx",
+          "columns": [
+            {
+              "expression": "repo_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "standard_suggestions_workspace_status_idx": {
+          "name": "standard_suggestions_workspace_status_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "status",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "standard_suggestions_repo_id_repos_id_fk": {
+          "name": "standard_suggestions_repo_id_repos_id_fk",
+          "tableFrom": "standard_suggestions",
+          "tableTo": "repos",
+          "columnsFrom": [
+            "repo_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "standard_suggestions_workspace_id_workspaces_id_fk": {
+          "name": "standard_suggestions_workspace_id_workspaces_id_fk",
+          "tableFrom": "standard_suggestions",
+          "tableTo": "workspaces",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.standard_usage": {
       "name": "standard_usage",
       "schema": "",
@@ -4919,6 +4772,25 @@
         "command",
         "hook",
         "agent"
+      ]
+    },
+    "public.suggestion_status": {
+      "name": "suggestion_status",
+      "schema": "public",
+      "values": [
+        "active",
+        "accepted",
+        "dismissed",
+        "expired"
+      ]
+    },
+    "public.suggestion_type": {
+      "name": "suggestion_type",
+      "schema": "public",
+      "values": [
+        "skill",
+        "command",
+        "hook"
       ]
     }
   },

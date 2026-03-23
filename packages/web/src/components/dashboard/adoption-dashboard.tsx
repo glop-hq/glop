@@ -13,6 +13,7 @@ import { ActivityByRepoChart } from "./activity-by-repo-chart";
 import { SessionOutcomeChart } from "./session-outcome-chart";
 import { RepoHeatmapChart } from "./repo-heatmap-chart";
 import { DigestSettings } from "./digest-settings";
+import { SuggestionsCard } from "./suggestions-card";
 import type { AnalyticsPeriod } from "@glop/shared";
 
 const periods: { value: AnalyticsPeriod; label: string }[] = [
@@ -208,6 +209,9 @@ export function AdoptionDashboard() {
           />
         )}
       </ChartCard>
+
+      {/* Smart Suggestions */}
+      <SuggestionsCard workspaceId={currentWorkspace?.id} />
 
       {/* Quick Links */}
       <div className="grid gap-4 sm:grid-cols-5">

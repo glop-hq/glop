@@ -358,3 +358,28 @@ export const scanResultSchema = z.object({
   completed_at: z.string(),
   error_message: z.string().nullable().optional(),
 });
+
+// ── Smart Suggestions ──────────────────────────────────────────────
+
+export const suggestionItemSchema = z.object({
+  suggestion_type: z.enum(["skill", "command", "hook"]),
+  title: z.string().min(1).max(200),
+  rationale: z.string().min(1).max(2000),
+  draft_content: z.string().min(1).max(50000),
+  draft_filename: z.string().min(1).max(500),
+  pattern_type: z.string().min(1).max(100),
+  pattern_data: z.record(z.unknown()).default({}),
+});
+
+export const standardSuggestionSubmitSchema = z.object({
+  workspace_id: z.string().uuid(),
+  repo_key: z.string().min(1),
+  suggestions: z.array(suggestionItemSchema).min(1).max(10),
+});
+
+export const suggestionStatusUpdateSchema = z.object({
+  status: z.enum(["accepted", "dismissed"]),
+  dismiss_reason: z
+    .enum(["not_relevant", "already_handled", "will_do_later"])
+    .optional(),
+});

@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    return NextResponse.json({ data: { id: insight.id } });
+    return NextResponse.json({ data: { id: insight.id, repo_id: repo.id } });
   } catch (error) {
     console.error("POST /api/v1/repos/insights error:", error);
     return NextResponse.json(
