@@ -440,14 +440,20 @@ export async function processHook(
     }
   }
 
-  // Detect standard (skill/command/agent) usage from tool_name
-  if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string" && repoId) {
-    const toolInput = rawPayload.tool_input as Record<string, unknown> | undefined;
-
-    // Skills & commands: invoked via the Skill tool
-    if (rawPayload.tool_name === "Skill" && typeof toolInput?.skill === "string") {
+  // Detect standard (skill/command/agent) usage
+  //
+  // Skills & commands: detected from UserPromptSubmit when the prompt starts
+  // with a slash command (e.g. "/commit", "/review-pr").  PostToolUse does NOT
+  // fire for the Skill tool, so we cannot rely on tool_name === "Skill".
+  if (hookType === "UserPromptSubmit" && repoId) {
+    const prompt = typeof rawPayload.prompt === "string" ? rawPayload.prompt : "";
+    // Match "/skill-name" but not file paths like "/Users/..." — require the
+    // name to be followed by whitespace, end-of-string, or nothing (not "/")
+    const slashMatch = prompt.match(/^\s*\/([a-zA-Z][a-zA-Z0-9_:-]*)(?:\s|$)/);
+    if (slashMatch) {
+      const skillName = slashMatch[1];
       try {
-        await recordStandardUsage(db, ctx.workspace_id, toolInput.skill as string, "skill", {
+        await recordStandardUsage(db, ctx.workspace_id, skillName, "skill", {
           run_id: runId,
           event_id: eventId,
           developer_entity_id: developerEntityId,
@@ -455,29 +461,29 @@ export async function processHook(
           occurred_at: now,
         });
       } catch (err) {
-        // Standard usage tracking is best-effort — don't fail the hook
         console.error("Standard usage recording error (skill):", err);
       }
     }
+  }
 
-    // Agents: invoked via the Agent tool
+  // Agents: detected from PostToolUse when tool_name is "Agent"
+  if (hookType === "PostToolUse" && rawPayload.tool_name === "Agent" && repoId) {
+    const toolInput = rawPayload.tool_input as Record<string, unknown> | undefined;
     // Only use subagent_type as name (stable identifier); fall back to
     // "inline-agent" to avoid unbounded cardinality from description strings
-    if (rawPayload.tool_name === "Agent") {
-      const agentName =
-        (typeof toolInput?.subagent_type === "string" ? toolInput.subagent_type : null) ??
-        "inline-agent";
-      try {
-        await recordStandardUsage(db, ctx.workspace_id, agentName, "agent", {
-          run_id: runId,
-          event_id: eventId,
-          developer_entity_id: developerEntityId,
-          repo_id: repoId,
-          occurred_at: now,
-        });
-      } catch (err) {
-        console.error("Standard usage recording error (agent):", err);
-      }
+    const agentName =
+      (typeof toolInput?.subagent_type === "string" ? toolInput.subagent_type : null) ??
+      "inline-agent";
+    try {
+      await recordStandardUsage(db, ctx.workspace_id, agentName, "agent", {
+        run_id: runId,
+        event_id: eventId,
+        developer_entity_id: developerEntityId,
+        repo_id: repoId,
+        occurred_at: now,
+      });
+    } catch (err) {
+      console.error("Standard usage recording error (agent):", err);
     }
   }
 
