@@ -114,7 +114,7 @@ export async function recordPermissionEvent(
     tool_name: ctx.tool_name,
     tool_args: truncatedArgs,
     pattern,
-    outcome: "approved",
+    outcome: "prompted",
     created_at: ctx.occurred_at,
   });
 }

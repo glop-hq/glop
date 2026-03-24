@@ -488,8 +488,10 @@ export async function processHook(
   }
 
   // ── Permission event tracking (PRD 12) ──
-  // PostToolUse means the tool was approved and executed
-  if (hookType === "PostToolUse" && typeof rawPayload.tool_name === "string" && repoId) {
+  // PermissionRequest is the actual interruption signal — the user was prompted
+  // to approve a tool. PostToolUse fires for both prompted and auto-allowed
+  // tools, so it's too noisy to be useful for allow-list suggestions.
+  if (hookType === "PermissionRequest" && typeof rawPayload.tool_name === "string" && repoId) {
     const toolInput = (rawPayload.tool_input ?? {}) as Record<string, unknown>;
     try {
       await recordPermissionEvent(db, ctx.workspace_id, {

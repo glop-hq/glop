@@ -8,17 +8,13 @@ const MIN_EVENTS_FOR_RECOMMENDATIONS = 3;
 const BLOCKED_PATTERNS = new Set(["Bash(*)"]);
 
 function assignTier(
-  approvalRate: number,
   frequency: number,
   consensus: number
-): "auto_allow" | "consider" | "keep_manual" | "auto_deny" {
-  // Auto-deny: denial rate ≥ 90% (approval rate ≤ 10%)
-  if (approvalRate <= 0.1 && frequency >= 5) return "auto_deny";
-  // Auto-allow: approval ≥ 95%, frequency ≥ 10, consensus ≥ 80%
-  if (approvalRate >= 0.95 && frequency >= 10 && consensus >= 0.8)
-    return "auto_allow";
-  // Consider: approval ≥ 80%, frequency ≥ 5
-  if (approvalRate >= 0.8 && frequency >= 5) return "consider";
+): "auto_allow" | "consider" | "keep_manual" {
+  // Auto-allow: prompted ≥ 10 times, ≥ 80% of developers hit it
+  if (frequency >= 10 && consensus >= 0.8) return "auto_allow";
+  // Consider: prompted ≥ 5 times
+  if (frequency >= 5) return "consider";
   // Keep manual: everything else
   return "keep_manual";
 }
@@ -36,12 +32,11 @@ export async function analyzeRepoPermissions(
     Date.now() - 30 * 24 * 60 * 60 * 1000
   ).toISOString();
 
-  // Aggregate permission events by pattern in the last 30 days
+  // Aggregate permission prompt events by pattern in the last 30 days
   const rows = await db
     .select({
       pattern: schema.permission_events.pattern,
       total: sql<number>`count(*)::int`,
-      approved: sql<number>`count(*) FILTER (WHERE ${schema.permission_events.outcome} = 'approved')::int`,
       unique_developers: sql<number>`count(DISTINCT ${schema.permission_events.developer_id})::int`,
     })
     .from(schema.permission_events)
@@ -79,17 +74,16 @@ export async function analyzeRepoPermissions(
 
   const now = new Date().toISOString();
   const recommendations = rows.map((row) => {
-    const approvalRate = row.total > 0 ? row.approved / row.total : 0;
     const consensus =
       totalDevelopers > 0 ? row.unique_developers / totalDevelopers : 0;
     // Force dangerous patterns to keep_manual regardless of stats
     const tier = BLOCKED_PATTERNS.has(row.pattern)
       ? "keep_manual" as const
-      : assignTier(approvalRate, row.total, consensus);
+      : assignTier(row.total, consensus);
 
-    // Estimate time saved: approvals per week × 3 seconds per prompt
+    // Estimate time saved: prompts per week × 3 seconds per prompt
     // 30 days ≈ 4.3 weeks
-    const weeklyFrequency = Math.round(row.approved / 4.3);
+    const weeklyFrequency = Math.round(row.total / 4.3);
     const estTimeSavedSec = tier === "auto_allow" ? weeklyFrequency * 3 : 0;
 
     return {
@@ -97,7 +91,7 @@ export async function analyzeRepoPermissions(
       workspace_id: workspaceId,
       pattern: row.pattern,
       tier,
-      approval_rate: Math.round(approvalRate * 1000) / 1000,
+      approval_rate: 1.0, // all recorded events are prompts that were approved
       frequency: row.total,
       developer_consensus: Math.round(consensus * 1000) / 1000,
       est_time_saved_sec: estTimeSavedSec,
