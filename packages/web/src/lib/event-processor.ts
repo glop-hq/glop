@@ -442,9 +442,9 @@ export async function processHook(
 
   // Detect standard (skill/command/agent) usage
   //
-  // Skills & commands: detected from UserPromptSubmit when the prompt starts
-  // with a slash command (e.g. "/commit", "/review-pr").  PostToolUse does NOT
-  // fire for the Skill tool, so we cannot rely on tool_name === "Skill".
+  // Skills & commands: detected from two sources:
+  // 1. UserPromptSubmit — when the user types a slash command (e.g. "/commit")
+  // 2. PostToolUse tool=Skill — when Claude autonomously invokes a skill
   if (hookType === "UserPromptSubmit" && repoId) {
     const prompt = typeof rawPayload.prompt === "string" ? rawPayload.prompt : "";
     // Match "/skill-name" but not file paths like "/Users/..." — require the
@@ -462,6 +462,25 @@ export async function processHook(
         });
       } catch (err) {
         console.error("Standard usage recording error (skill):", err);
+      }
+    }
+  }
+
+  // Skills invoked autonomously by Claude via the Skill tool
+  if (hookType === "PostToolUse" && rawPayload.tool_name === "Skill" && repoId) {
+    const toolInput = rawPayload.tool_input as Record<string, unknown> | undefined;
+    const skillName = typeof toolInput?.skill === "string" ? toolInput.skill : null;
+    if (skillName) {
+      try {
+        await recordStandardUsage(db, ctx.workspace_id, skillName, "skill", {
+          run_id: runId,
+          event_id: eventId,
+          developer_entity_id: developerEntityId,
+          repo_id: repoId,
+          occurred_at: now,
+        });
+      } catch (err) {
+        console.error("Standard usage recording error (skill/PostToolUse):", err);
       }
     }
   }
