@@ -5,7 +5,15 @@ import { schema, type DbClient } from "./db";
 const MIN_EVENTS_FOR_RECOMMENDATIONS = 3;
 
 // Patterns that must never be recommended — too broad / dangerous
-const BLOCKED_PATTERNS = new Set(["Bash(*)"]);
+const BLOCKED_PATTERNS = new Set([
+  "Bash(*)",
+  "Bash(rm *)", "Bash(rm)",
+  "Bash(sudo *)",
+  "Bash(chmod *)", "Bash(chown *)",
+  "Bash(kill *)", "Bash(pkill *)",
+  "Bash(dd *)", "Bash(mkfs *)",
+  "Bash(git reset *)", "Bash(git push --force *)", "Bash(git clean *)",
+]);
 
 function assignTier(
   frequency: number,
