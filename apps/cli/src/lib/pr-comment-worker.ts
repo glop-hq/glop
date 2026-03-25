@@ -63,7 +63,7 @@ async function main() {
   // 3. Generate summary via local claude CLI
   let commentBody: string;
   try {
-    commentBody = execFileSync("claude", ["-p", prompt], {
+    commentBody = execFileSync("claude", ["-p", prompt, "--model", "haiku", "--bare"], {
       encoding: "utf-8",
       timeout: 60000,
       maxBuffer: 1024 * 1024,

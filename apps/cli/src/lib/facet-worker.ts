@@ -30,7 +30,7 @@ function formatConversation(messages: TranscriptMessage[]): string {
 }
 
 function runClaude(prompt: string): string {
-  return execFileSync("claude", ["-p", prompt, "--model", "haiku"], {
+  return execFileSync("claude", ["-p", prompt, "--model", "haiku", "--bare"], {
     encoding: "utf-8",
     timeout: 90000,
     maxBuffer: 1024 * 1024,

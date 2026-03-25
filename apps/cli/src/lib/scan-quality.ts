@@ -181,7 +181,7 @@ export function runQualityChecks(repoRoot: string): CheckResult[] {
   // 2. AI-powered checks for verification_setup and setup_instructions
   try {
     const prompt = buildPrompt(claudeMd, readme);
-    const output = execFileSync("claude", ["-p", prompt], {
+    const output = execFileSync("claude", ["-p", prompt, "--model", "haiku", "--bare"], {
       encoding: "utf-8",
       timeout: 90000,
       maxBuffer: 1024 * 1024,

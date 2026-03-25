@@ -308,7 +308,7 @@ export const insightsCommand = new Command("insights")
     );
 
     try {
-      const output = execFileSync("claude", ["-p", prompt, "--model", "haiku"], {
+      const output = execFileSync("claude", ["-p", prompt, "--model", "haiku", "--bare"], {
         encoding: "utf-8",
         timeout: 90000,
         maxBuffer: 1024 * 1024,

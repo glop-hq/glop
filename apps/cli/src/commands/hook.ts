@@ -1,5 +1,5 @@
 import { Command } from "commander";
-import { openSync, readSync, closeSync, readFileSync, existsSync, mkdirSync, writeFileSync } from "fs";
+import { openSync, readSync, closeSync, readFileSync, existsSync, mkdirSync, writeFileSync, appendFileSync } from "fs";
 import { spawn } from "child_process";
 import { fileURLToPath } from "url";
 import path from "path";
@@ -7,6 +7,18 @@ import os from "os";
 import { loadConfig, loadRepoConfig } from "../lib/config.js";
 import { getRepoRoot, getRepoKey, getBranch, getGitUserName, getGitUserEmail, getCommitDiffStats } from "../lib/git.js";
 import { readMcpConfigs } from "../lib/mcp-config.js";
+
+const HOOK_DEBUG_LOG = path.join(os.homedir(), ".glop", "hook-debug.log");
+
+function debugLog(msg: string) {
+  try {
+    const ts = new Date().toISOString();
+    const line = `${ts} ${msg}\n`;
+    appendFileSync(HOOK_DEBUG_LOG, line);
+  } catch {
+    // never fail the hook because of logging
+  }
+}
 
 const PR_URL_RE = /(https:\/\/github\.com\/[^\s]+\/pull\/\d+)/;
 
@@ -42,11 +54,17 @@ export const hookCommand = new Command("__hook")
   .description("internal")
   .action(async () => {
     const config = loadConfig();
-    if (!config) return;
+    if (!config) {
+      debugLog("EXIT: loadConfig() returned null");
+      return;
+    }
 
     // Require repo binding — exit silently if repo not initialized
     const repoConfig = loadRepoConfig();
-    if (!repoConfig) return;
+    if (!repoConfig) {
+      debugLog("EXIT: loadRepoConfig() returned null — cwd=" + process.cwd());
+      return;
+    }
 
     let input = "";
     for await (const chunk of process.stdin) {
@@ -57,8 +75,13 @@ export const hookCommand = new Command("__hook")
     try {
       payload = JSON.parse(input);
     } catch {
+      debugLog("EXIT: JSON.parse failed — input length=" + input.length);
       return;
     }
+
+    const hookEvent = payload.hook_event_name as string || "unknown";
+    const toolName = payload.tool_name as string || "";
+    debugLog(`HOOK: ${hookEvent} tool=${toolName} cwd=${process.cwd()} inputLen=${input.length}`);
 
     // Enrich with git info and workspace binding
     payload.repo_key = getRepoKey() || payload.cwd || "unknown";
@@ -109,15 +132,19 @@ export const hookCommand = new Command("__hook")
     }
 
     try {
+      const bodyStr = JSON.stringify(payload);
+      debugLog(`SEND: ${hookEvent} tool=${toolName} bodyLen=${bodyStr.length}`);
       const res = await fetch(`${config.server_url}/api/v1/ingest/hook`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${config.api_key}`,
         },
-        body: JSON.stringify(payload),
+        body: bodyStr,
         signal: AbortSignal.timeout(5000),
       });
+
+      debugLog(`RESP: ${hookEvent} tool=${toolName} status=${res.status}`);
 
       // Parse response body once
       const resBody = res.ok
@@ -325,7 +352,8 @@ export const hookCommand = new Command("__hook")
           // Silently ignore — facet extraction is best-effort
         }
       }
-    } catch {
+    } catch (err) {
+      debugLog(`ERROR: ${hookEvent} tool=${toolName} err=${err instanceof Error ? err.message : String(err)}`);
       if (payload.hook_event_name === "SessionStart") {
         console.log(`glop: server unreachable at ${config.server_url}`);
       }
