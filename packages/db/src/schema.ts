@@ -508,6 +508,7 @@ export const repo_scans = pgTable(
     status: scanStatusEnum("status").notNull().default("pending"),
     triggered_by: text("triggered_by").notNull(),
     error_message: text("error_message"),
+    permission_health_score: integer("permission_health_score"),
     started_at: timestamp("started_at", {
       mode: "string",
       withTimezone: true,

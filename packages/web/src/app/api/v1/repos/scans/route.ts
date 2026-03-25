@@ -3,6 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { getDb, schema } from "@/lib/db";
 import { validateApiKey } from "@/lib/auth";
 import { scanResultSchema } from "@glop/shared";
+import { computePermissionHealth } from "@/lib/permission-health";
 
 export const dynamic = "force-dynamic";
 
@@ -133,6 +134,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Compute permission health score (server-side enrichment)
+    const permissionHealth = await computePermissionHealth(db, repo.id);
+    if (permissionHealth !== null) {
+      await db
+        .update(schema.repo_scans)
+        .set({ permission_health_score: permissionHealth })
+        .where(eq(schema.repo_scans.id, scan.id));
+    }
+
     // Update repo.last_scanned_at
     await db
       .update(schema.repos)
@@ -142,7 +152,7 @@ export async function POST(request: NextRequest) {
       })
       .where(eq(schema.repos.id, repo.id));
 
-    return NextResponse.json({ data: { id: scan.id, score: scan.score, status: scan.status } });
+    return NextResponse.json({ data: { id: scan.id, score: scan.score, permission_health_score: permissionHealth, status: scan.status } });
   } catch (error) {
     console.error("POST /api/v1/repos/scans error:", error);
     return NextResponse.json(

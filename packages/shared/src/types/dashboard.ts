@@ -83,6 +83,7 @@ export interface RepoDashboardResponse {
     sessions: number;
     developers: number;
     readiness_score: number | null;
+    permission_health_score: number | null;
     commits: number;
     prs: number;
     sessions_change: number | null;

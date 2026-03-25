@@ -140,9 +140,12 @@ export async function GET(
           and(baseWhere, sql`${schema.artifacts.artifact_type} = 'pr'`)
         ),
 
-      // 4. Latest readiness score
+      // 4. Latest readiness score + permission health
       db
-        .select({ score: schema.repo_scans.score })
+        .select({
+          score: schema.repo_scans.score,
+          permission_health_score: schema.repo_scans.permission_health_score,
+        })
         .from(schema.repo_scans)
         .where(
           and(
@@ -332,6 +335,7 @@ export async function GET(
         sessions: Number(summaryRows[0]?.sessions ?? 0),
         developers: Number(summaryRows[0]?.developers ?? 0),
         readiness_score: readinessRows[0]?.score ?? null,
+        permission_health_score: readinessRows[0]?.permission_health_score ?? null,
         commits: Number(commitCountRows[0]?.count ?? 0),
         prs: Number(prCountRows[0]?.count ?? 0),
         sessions_change: pctChange(

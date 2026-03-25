@@ -174,7 +174,7 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
 
       {/* Summary Cards */}
       <Card>
-        <div className="grid grid-cols-2 divide-x divide-y sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+        <div className="grid grid-cols-2 divide-x divide-y sm:grid-cols-3 lg:grid-cols-6 lg:divide-y-0">
           <KpiStat
             title="Sessions"
             value={String(data?.summary.sessions ?? 0)}
@@ -191,6 +191,15 @@ export function RepoDrillDown({ repoId }: { repoId: string }) {
             value={
               data?.summary.readiness_score != null
                 ? `${data.summary.readiness_score}/100`
+                : "—"
+            }
+            loading={loading}
+          />
+          <KpiStat
+            title="Permission Health"
+            value={
+              data?.summary.permission_health_score != null
+                ? `${data.summary.permission_health_score}/100`
                 : "—"
             }
             loading={loading}

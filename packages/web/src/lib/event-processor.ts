@@ -13,6 +13,7 @@ import { resolveOrCreateDeveloper, resolveOrCreateRepo } from "./entity-resolver
 import { recordMcpUsage } from "./mcp-usage";
 import { recordStandardUsage } from "./standard-usage";
 import { recordPermissionEvent } from "./permission-tracker";
+import { maybeAnalyzePermissions } from "./permission-analysis-scheduler";
 
 function generateId(): string {
   return crypto.randomUUID();
@@ -522,6 +523,8 @@ export async function processHook(
         tool_input: toolInput,
         occurred_at: now,
       });
+      // Auto-trigger analysis if stale (stateless throttle, serverless-safe)
+      await maybeAnalyzePermissions(db, repoId, ctx.workspace_id);
     } catch (err) {
       // Permission tracking is best-effort — don't fail the hook
       console.error("Permission event recording error:", err);
