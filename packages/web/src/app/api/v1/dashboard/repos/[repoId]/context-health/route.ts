@@ -84,6 +84,7 @@ export async function GET(
           total: sql<number>`count(*)::int`,
           compacted: sql<number>`count(*) FILTER (WHERE ${schema.run_context_health.compaction_count} > 0)::int`,
           avg_compactions: sql<number>`avg(${schema.run_context_health.compaction_count})`,
+          avg_peak_utilization: sql<number>`avg(${schema.run_context_health.peak_utilization_pct}) FILTER (WHERE ${schema.run_context_health.peak_utilization_pct} IS NOT NULL)`,
         })
         .from(schema.run_context_health)
         .where(baseWhere)
@@ -95,8 +96,20 @@ export async function GET(
         ),
 
       db
-        .select()
+        .select({
+          repo_id: sql<string>`${schema.repo_context_recommendations.repo_id}::text`,
+          repo_key: schema.repos.repo_key,
+          recommended_max_duration_min:
+            schema.repo_context_recommendations.recommended_max_duration_min,
+          confidence: schema.repo_context_recommendations.confidence,
+          sample_size: schema.repo_context_recommendations.sample_size,
+          reasoning: schema.repo_context_recommendations.reasoning,
+        })
         .from(schema.repo_context_recommendations)
+        .innerJoin(
+          schema.repos,
+          eq(schema.repos.id, schema.repo_context_recommendations.repo_id)
+        )
         .where(eq(schema.repo_context_recommendations.repo_id, repoId))
         .limit(1),
     ]);
@@ -132,6 +145,10 @@ export async function GET(
               ? round1((Number(r.compacted) / Number(r.total)) * 100)
               : 0,
           avg_compactions: round1(Number(r.avg_compactions ?? 0)),
+          avg_peak_utilization_pct:
+            r.avg_peak_utilization != null
+              ? round1(Number(r.avg_peak_utilization))
+              : null,
         })
       ),
     };
@@ -139,6 +156,7 @@ export async function GET(
     const recommendation: RepoContextRecommendation | null = recRows[0]
       ? {
           repo_id: recRows[0].repo_id,
+          repo_key: recRows[0].repo_key,
           recommended_max_duration_min:
             recRows[0].recommended_max_duration_min,
           confidence: recRows[0].confidence,

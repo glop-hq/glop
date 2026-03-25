@@ -174,6 +174,7 @@ export interface ContextHealthTrendPoint {
   date: string;
   pct_compacted: number;
   avg_compactions: number;
+  avg_peak_utilization_pct: number | null;
 }
 
 export interface ContextHealthSummary {
@@ -193,6 +194,7 @@ export interface RepoContextHealthRow extends ContextHealthSummary {
 
 export interface RepoContextRecommendation {
   repo_id: string;
+  repo_key: string;
   recommended_max_duration_min: number | null;
   confidence: string;
   sample_size: number;

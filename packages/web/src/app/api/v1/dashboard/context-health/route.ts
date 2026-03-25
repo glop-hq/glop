@@ -89,6 +89,7 @@ export async function GET(request: NextRequest) {
             total: sql<number>`count(*)::int`,
             compacted: sql<number>`count(*) FILTER (WHERE ${schema.run_context_health.compaction_count} > 0)::int`,
             avg_compactions: sql<number>`avg(${schema.run_context_health.compaction_count})`,
+            avg_peak_utilization: sql<number>`avg(${schema.run_context_health.peak_utilization_pct}) FILTER (WHERE ${schema.run_context_health.peak_utilization_pct} IS NOT NULL)`,
           })
           .from(schema.run_context_health)
           .where(baseWhere)
@@ -108,6 +109,9 @@ export async function GET(request: NextRequest) {
             compacted: sql<number>`count(*) FILTER (WHERE ${schema.run_context_health.compaction_count} > 0)::int`,
             avg_compactions: sql<number>`avg(${schema.run_context_health.compaction_count})`,
             avg_first_compaction_min: sql<number>`avg(${schema.run_context_health.first_compaction_at_min}) FILTER (WHERE ${schema.run_context_health.first_compaction_at_min} IS NOT NULL)`,
+            avg_peak_utilization: sql<number>`avg(${schema.run_context_health.peak_utilization_pct}) FILTER (WHERE ${schema.run_context_health.peak_utilization_pct} IS NOT NULL)`,
+            above_80: sql<number>`count(*) FILTER (WHERE ${schema.run_context_health.peak_utilization_pct} > 80)::int`,
+            with_utilization: sql<number>`count(*) FILTER (WHERE ${schema.run_context_health.peak_utilization_pct} IS NOT NULL)::int`,
           })
           .from(schema.run_context_health)
           .innerJoin(
@@ -138,6 +142,7 @@ export async function GET(request: NextRequest) {
     const freshRecommendationRows = await db
       .select({
         repo_id: sql<string>`${schema.repo_context_recommendations.repo_id}::text`,
+        repo_key: schema.repos.repo_key,
         recommended_max_duration_min:
           schema.repo_context_recommendations.recommended_max_duration_min,
         confidence: schema.repo_context_recommendations.confidence,
@@ -145,6 +150,10 @@ export async function GET(request: NextRequest) {
         reasoning: schema.repo_context_recommendations.reasoning,
       })
       .from(schema.repo_context_recommendations)
+      .innerJoin(
+        schema.repos,
+        eq(schema.repos.id, schema.repo_context_recommendations.repo_id)
+      )
       .where(
         eq(schema.repo_context_recommendations.workspace_id, workspace_id)
       );
@@ -178,6 +187,10 @@ export async function GET(request: NextRequest) {
               ? round1((Number(r.compacted) / Number(r.total)) * 100)
               : 0,
           avg_compactions: round1(Number(r.avg_compactions ?? 0)),
+          avg_peak_utilization_pct:
+            r.avg_peak_utilization != null
+              ? round1(Number(r.avg_peak_utilization))
+              : null,
         })
       ),
     };
@@ -185,6 +198,8 @@ export async function GET(request: NextRequest) {
     const by_repo: RepoContextHealthRow[] = repoRows.map((r) => {
       const rTotal = Number(r.total);
       const rCompacted = Number(r.compacted);
+      const rWithUtil = Number(r.with_utilization ?? 0);
+      const rAbove80 = Number(r.above_80 ?? 0);
       return {
         repo_id: r.repo_id,
         repo_key: r.repo_key,
@@ -196,8 +211,12 @@ export async function GET(request: NextRequest) {
           r.avg_first_compaction_min != null
             ? round1(Number(r.avg_first_compaction_min))
             : null,
-        avg_peak_utilization_pct: null, // not computed per-repo in workspace view
-        pct_sessions_above_80: null,
+        avg_peak_utilization_pct:
+          r.avg_peak_utilization != null
+            ? round1(Number(r.avg_peak_utilization))
+            : null,
+        pct_sessions_above_80:
+          rWithUtil > 0 ? round1((rAbove80 / rWithUtil) * 100) : null,
         total_sessions_with_data: rTotal,
         trend: [], // per-repo trend omitted in workspace view for performance
       };
@@ -206,6 +225,7 @@ export async function GET(request: NextRequest) {
     const recommendations: RepoContextRecommendation[] = freshRecommendationRows.map(
       (r) => ({
         repo_id: r.repo_id,
+        repo_key: r.repo_key,
         recommended_max_duration_min: r.recommended_max_duration_min,
         confidence: r.confidence,
         sample_size: r.sample_size,

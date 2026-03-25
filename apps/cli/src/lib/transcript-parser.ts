@@ -41,7 +41,11 @@ export function extractContextHealth(raw: string): ContextHealthStats | null {
       const usage = obj.message?.usage;
       if (!usage || typeof usage.input_tokens !== "number") continue;
 
-      const inputTokens = usage.input_tokens;
+      // Context window utilization = input_tokens + cached tokens
+      // input_tokens alone is just the non-cached portion (often ~1-3 tokens)
+      const cacheCreation = typeof usage.cache_creation_input_tokens === "number" ? usage.cache_creation_input_tokens : 0;
+      const cacheRead = typeof usage.cache_read_input_tokens === "number" ? usage.cache_read_input_tokens : 0;
+      const inputTokens = usage.input_tokens + cacheCreation + cacheRead;
       const outputTokens = typeof usage.output_tokens === "number" ? usage.output_tokens : 0;
 
       // Detect compaction: input_tokens drops >30% from previous message

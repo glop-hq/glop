@@ -16,6 +16,7 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  Legend,
 } from "recharts";
 import type { AnalyticsPeriod } from "@glop/shared";
 
@@ -151,7 +152,7 @@ export function ContextHealthDashboard() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm font-medium">
-            Compaction Rate Trend
+            Context Health Trend
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -181,8 +182,12 @@ export function ContextHealthDashboard() {
                     borderRadius: "8px",
                     fontSize: "12px",
                   }}
-                  formatter={(value) => [`${value}%`, "Compacted"]}
+                  formatter={(value, name) => [
+                    value != null ? `${value}%` : "—",
+                    name,
+                  ]}
                 />
+                <Legend />
                 <Line
                   type="monotone"
                   dataKey="pct_compacted"
@@ -190,6 +195,15 @@ export function ContextHealthDashboard() {
                   strokeWidth={2}
                   dot={false}
                   name="% Compacted"
+                />
+                <Line
+                  type="monotone"
+                  dataKey="avg_peak_utilization_pct"
+                  stroke="hsl(var(--chart-2))"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Avg Peak Utilization"
+                  connectNulls
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -218,6 +232,8 @@ export function ContextHealthDashboard() {
                   <tr className="border-b text-left text-muted-foreground">
                     <th className="pb-2 pr-4 font-medium">Repo</th>
                     <th className="pb-2 pr-4 font-medium">Sessions</th>
+                    <th className="pb-2 pr-4 font-medium">Avg Peak</th>
+                    <th className="pb-2 pr-4 font-medium">&gt; 80%</th>
                     <th className="pb-2 pr-4 font-medium">% Compacted</th>
                     <th className="pb-2 pr-4 font-medium">
                       Avg Compactions
@@ -233,6 +249,28 @@ export function ContextHealthDashboard() {
                       </td>
                       <td className="py-2 pr-4">
                         {repo.total_sessions_with_data}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {repo.avg_peak_utilization_pct != null ? (
+                          <span
+                            className={cn(
+                              repo.avg_peak_utilization_pct > 80
+                                ? "text-red-600 dark:text-red-400"
+                                : repo.avg_peak_utilization_pct > 60
+                                  ? "text-yellow-600 dark:text-yellow-400"
+                                  : "text-green-600 dark:text-green-400"
+                            )}
+                          >
+                            {repo.avg_peak_utilization_pct}%
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                      <td className="py-2 pr-4">
+                        {repo.pct_sessions_above_80 != null
+                          ? `${repo.pct_sessions_above_80}%`
+                          : "—"}
                       </td>
                       <td className="py-2 pr-4">
                         <span
@@ -283,6 +321,9 @@ export function ContextHealthDashboard() {
                 className="rounded-lg border p-4 space-y-1"
               >
                 <div className="flex items-center gap-2">
+                  <span className="font-medium">
+                    {rec.repo_key.split("/").pop()}
+                  </span>
                   {rec.recommended_max_duration_min && (
                     <span className="text-lg font-bold">
                       {rec.recommended_max_duration_min} min
