@@ -5,7 +5,7 @@ import { useSuggestionsSummary } from "@/hooks/use-suggestions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Lightbulb, FileCode, Terminal, Webhook } from "lucide-react";
+import { Lightbulb, FileCode, Terminal, Webhook, FolderGit2 } from "lucide-react";
 
 function TypeIcon({ type }: { type: string }) {
   switch (type) {
@@ -93,7 +93,8 @@ export function SuggestionsCard({
               </Badge>
               <div className="min-w-0">
                 <p className="font-medium text-xs">{s.title}</p>
-                <p className="text-xs text-muted-foreground truncate">
+                <p className="flex items-center gap-1 text-xs text-muted-foreground truncate">
+                  <FolderGit2 className="h-3 w-3 shrink-0" />
                   {s.repo_display_name || s.repo_key}
                 </p>
               </div>
