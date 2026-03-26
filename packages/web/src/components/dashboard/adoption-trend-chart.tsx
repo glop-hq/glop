@@ -108,18 +108,20 @@ export function AdoptionTrendChart({ data, period }: Props) {
           type="monotone"
           dataKey="active_developers"
           name="Developers"
-          stroke="hsl(var(--chart-1))"
+          stroke="var(--chart-1)"
           strokeWidth={2}
-          dot={false}
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
         />
         <Line
           yAxisId="right"
           type="monotone"
           dataKey="sessions"
           name="Sessions"
-          stroke="hsl(var(--chart-2))"
+          stroke="var(--chart-2)"
           strokeWidth={2}
-          dot={false}
+          dot={{ r: 3 }}
+          activeDot={{ r: 5 }}
         />
       </LineChart>
     </ResponsiveContainer>
