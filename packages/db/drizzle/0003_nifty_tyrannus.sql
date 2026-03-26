@@ -1,1 +1,0 @@
-ALTER TYPE "public"."event_type" ADD VALUE 'run.context_compacted' BEFORE 'artifact.added';
