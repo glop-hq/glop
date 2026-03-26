@@ -65,7 +65,7 @@ export function ContextHealthDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/overview"
             className="cursor-pointer rounded-md p-1 hover:bg-muted"
           >
             <ArrowLeft className="h-5 w-5" />

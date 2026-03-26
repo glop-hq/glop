@@ -157,10 +157,10 @@ function ForbiddenScreen({ runId }: { runId: string }) {
           </button>
         )}
         <a
-          href="/live"
+          href="/sessions"
           className="mt-3 flex w-full cursor-pointer items-center justify-center text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          Go to live runs
+          Go to sessions
         </a>
       </div>
     </div>

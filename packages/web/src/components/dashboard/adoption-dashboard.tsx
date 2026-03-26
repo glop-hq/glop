@@ -93,7 +93,7 @@ export function AdoptionDashboard() {
   const router = useRouter();
 
   const handleRepoClick = (repoId: string) => {
-    router.push(`/dashboard/repos/${repoId}`);
+    router.push(`/repos/${repoId}`);
   };
 
   return (
@@ -101,7 +101,7 @@ export function AdoptionDashboard() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">Overview</h1>
           <p className="text-sm text-muted-foreground">
             AI coding adoption across your workspace
           </p>

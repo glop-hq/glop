@@ -91,7 +91,7 @@ function FrictionCard({
             <span>·</span>
             {insight.repo_id ? (
               <Link
-                href={`/dashboard/repos/${insight.repo_id}`}
+                href={`/repos/${insight.repo_id}`}
                 className="cursor-pointer text-foreground underline-offset-2 hover:underline"
               >
                 {insight.repo_key}
@@ -141,7 +141,7 @@ export function FrictionAnalytics() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/overview"
             className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />

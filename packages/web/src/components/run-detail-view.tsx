@@ -160,7 +160,7 @@ export function RunDetailView({ runId }: { runId: string }) {
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
           {data.parent_run && (
             <Link
-              href={`/runs/${data.parent_run.id}`}
+              href={`/sessions/${data.parent_run.id}`}
               className="flex items-center gap-1 hover:text-foreground cursor-pointer"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
@@ -170,7 +170,7 @@ export function RunDetailView({ runId }: { runId: string }) {
           {data.child_runs?.map((child) => (
             <Link
               key={child.id}
-              href={`/runs/${child.id}`}
+              href={`/sessions/${child.id}`}
               className="flex items-center gap-1 hover:text-foreground cursor-pointer"
             >
               Continued in {child.id.slice(0, 8)}

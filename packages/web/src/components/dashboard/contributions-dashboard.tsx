@@ -85,7 +85,7 @@ export function ContributionsDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard"
+            href="/overview"
             className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -219,7 +219,7 @@ export function ContributionsDashboard() {
                     <tr key={repo.repo_id} className="border-b last:border-0">
                       <td className="py-2">
                         <Link
-                          href={`/dashboard/repos/${repo.repo_id}`}
+                          href={`/repos/${repo.repo_id}`}
                           className="cursor-pointer font-medium text-foreground underline-offset-2 hover:underline"
                         >
                           {repo.display_name ?? repo.repo_key}

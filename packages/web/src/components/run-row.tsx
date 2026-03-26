@@ -39,7 +39,7 @@ export function RunRow({
         "cursor-pointer border-b transition-colors hover:bg-muted/50",
         statusRowClass[run.status]
       )}
-      onClick={() => router.push(`/runs/${run.id}`)}
+      onClick={() => router.push(`/sessions/${run.id}`)}
     >
       {/* Status dot */}
       <td className="pl-4 pr-2 py-3 w-8 align-middle text-center">

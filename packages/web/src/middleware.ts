@@ -13,6 +13,7 @@ const publicPaths = [
   "/api/auth",
   "/shared",
   "/runs",
+  "/sessions",
   "/terms",
   "/privacy",
 ];

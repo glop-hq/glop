@@ -5,19 +5,16 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Radio, Clock, BarChart3, FolderGit2, Sparkles, Check, ChevronsUpDown, Plus, LayoutDashboard } from "lucide-react";
+import { Radio, FolderGit2, Check, ChevronsUpDown, Plus, LayoutDashboard } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { Popover } from "@/components/ui/popover";
 import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 
 const navItems = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/live", label: "Live Now", icon: Radio },
-  { href: "/history", label: "History", icon: Clock },
-  { href: "/insights", label: "Insights", icon: BarChart3 },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/repos", label: "Repos", icon: FolderGit2 },
-  { href: "/skills", label: "Skills", icon: Sparkles },
+  { href: "/sessions", label: "Sessions", icon: Radio },
 ];
 
 export function NavHeader() {
@@ -30,7 +27,7 @@ export function NavHeader() {
   return (
     <header className="relative z-50 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="mx-auto flex h-14 max-w-7xl items-center px-4 sm:px-6">
-        <Link href="/live" className="mr-3 flex items-center gap-2">
+        <Link href="/overview" className="mr-3 flex items-center gap-2">
           <span className="text-lg font-bold tracking-tight">glop</span>
         </Link>
         <div className="mr-3 h-5 w-px bg-border" />

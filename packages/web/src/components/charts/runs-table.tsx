@@ -203,7 +203,7 @@ export function RunsTable({ data }: { data: RunBreakdown[] }) {
                   </td>
                   <td className="py-2 pr-2">
                     <Link
-                      href={`/runs/${run.run_id}`}
+                      href={`/sessions/${run.run_id}`}
                       className="flex min-w-0 font-medium text-foreground hover:underline"
                     >
                       <RepoName repoKey={run.repo_key} />

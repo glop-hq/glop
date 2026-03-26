@@ -53,7 +53,7 @@ function severityOrder(severity: string): number {
   return 2;
 }
 
-export function RepoDetail({ repoId }: { repoId: string }) {
+export function RepoDetail({ repoId, embedded }: { repoId: string; embedded?: boolean }) {
   const { data, loading, error } = useRepoDetail(repoId);
 
   if (loading) {
@@ -97,36 +97,38 @@ export function RepoDetail({ repoId }: { repoId: string }) {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <Link
-            href="/repos"
-            className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
-          >
-            <ArrowLeft className="h-3 w-3" />
-            Back to repos
-          </Link>
-          <div className="flex items-center gap-3">
-            <FolderGit2 className="h-6 w-6 text-muted-foreground" />
-            <div>
-              <h1 className="text-lg font-semibold">
-                {repo.display_name || repo.repo_key.split("/").pop()}
-              </h1>
-              <p className="text-sm text-muted-foreground font-mono">
-                {repo.repo_key}
-              </p>
+      {!embedded && (
+        <div className="flex items-start justify-between">
+          <div>
+            <Link
+              href="/repos"
+              className="mb-2 inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+            >
+              <ArrowLeft className="h-3 w-3" />
+              Back to repos
+            </Link>
+            <div className="flex items-center gap-3">
+              <FolderGit2 className="h-6 w-6 text-muted-foreground" />
+              <div>
+                <h1 className="text-lg font-semibold">
+                  {repo.display_name || repo.repo_key.split("/").pop()}
+                </h1>
+                <p className="text-sm text-muted-foreground font-mono">
+                  {repo.repo_key}
+                </p>
+              </div>
             </div>
           </div>
+          <div className="text-center">
+            <ScoreBadge score={latest_scan?.score ?? null} size="lg" />
+            {latest_scan?.completed_at && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {formatRelativeTime(latest_scan.completed_at)}
+              </p>
+            )}
+          </div>
         </div>
-        <div className="text-center">
-          <ScoreBadge score={latest_scan?.score ?? null} size="lg" />
-          {latest_scan?.completed_at && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              {formatRelativeTime(latest_scan.completed_at)}
-            </p>
-          )}
-        </div>
-      </div>
+      )}
 
       {/* Summary stats */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -254,7 +256,7 @@ export function RepoDetail({ repoId }: { repoId: string }) {
               {recent_runs.map((run) => (
                 <Link
                   key={run.id}
-                  href={`/runs/${run.id}`}
+                  href={`/sessions/${run.id}`}
                   className="flex items-center justify-between rounded border px-3 py-2 text-sm transition-colors hover:bg-muted/50 cursor-pointer"
                 >
                   <div className="flex items-center gap-2 min-w-0">
