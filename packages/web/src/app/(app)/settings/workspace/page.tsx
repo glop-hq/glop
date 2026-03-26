@@ -7,6 +7,7 @@ import { useWorkspaces } from "@/hooks/use-workspaces";
 import { useInviteLink } from "@/hooks/use-invite-link";
 import { useDevelopers } from "@/hooks/use-developers";
 import { useRepos } from "@/hooks/use-repos";
+import { DigestSettings } from "@/components/dashboard/digest-settings";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -57,6 +58,7 @@ export default function WorkspaceSettingsPage() {
       )}
       <DevelopersSection workspaceId={workspace.id} isAdmin={workspace.role === "admin"} />
       <ReposSection workspaceId={workspace.id} />
+      <DigestSettings />
     </main>
   );
 }

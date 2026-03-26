@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { AdoptionTrendChart } from "./dashboard/adoption-trend-chart";
 import { CoachingTipsCard } from "./dashboard/coaching-tips-card";
 import { SuggestionsCard } from "./dashboard/suggestions-card";
-import { DigestSettings } from "./dashboard/digest-settings";
 import type { AnalyticsPeriod } from "@glop/shared";
 
 const periods: { value: AnalyticsPeriod; label: string }[] = [
@@ -159,9 +158,6 @@ export function OverviewPage() {
         <CoachingTipsCard workspaceId={currentWorkspace?.id} />
         <SuggestionsCard workspaceId={currentWorkspace?.id} />
       </div>
-
-      {/* Digest Settings */}
-      <DigestSettings />
     </div>
   );
 }
