@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { cn } from "@/lib/utils";
-import { Radio, FolderGit2, Check, ChevronsUpDown, Plus, LayoutDashboard } from "lucide-react";
+import { Radio, FolderGit2, BarChart3, Check, ChevronsUpDown, Plus, LayoutDashboard } from "lucide-react";
 import { UserMenu } from "./user-menu";
 import { useWorkspaces } from "@/hooks/use-workspaces";
 import { Popover } from "@/components/ui/popover";
@@ -15,6 +15,7 @@ const navItems = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/repos", label: "Repos", icon: FolderGit2 },
   { href: "/sessions", label: "Sessions", icon: Radio },
+  { href: "/insights", label: "Insights", icon: BarChart3 },
 ];
 
 export function NavHeader() {

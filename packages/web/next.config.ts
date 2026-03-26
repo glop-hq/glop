@@ -10,7 +10,6 @@ const nextConfig: NextConfig = {
       { source: "/live", destination: "/sessions", permanent: false },
       { source: "/history", destination: "/sessions", permanent: false },
       { source: "/dashboard", destination: "/overview", permanent: false },
-      { source: "/insights", destination: "/overview", permanent: false },
       { source: "/skills", destination: "/repos", permanent: false },
       { source: "/runs/:id", destination: "/sessions/:id", permanent: false },
     ];
