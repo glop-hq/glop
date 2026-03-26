@@ -127,7 +127,7 @@ function FrictionCard({
   );
 }
 
-export function FrictionAnalytics() {
+export function FrictionAnalytics({ embedded }: { embedded?: boolean } = {}) {
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const { currentWorkspace } = useWorkspaces();
   const { data, loading, refetch } = useFrictionInsights(
@@ -136,24 +136,26 @@ export function FrictionAnalytics() {
   );
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className={cn("space-y-6", !embedded && "mx-auto max-w-7xl px-4 py-8 sm:px-6")}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/overview"
-            className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Friction & Success Insights</h1>
-            <p className="text-sm text-muted-foreground">
-              Where AI coding struggles and where it thrives
-            </p>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/insights"
+              className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">Friction & Success Insights</h1>
+              <p className="text-sm text-muted-foreground">
+                Where AI coding struggles and where it thrives
+              </p>
+            </div>
           </div>
-        </div>
-        <div className="flex rounded-lg border bg-muted p-0.5">
+        )}
+        <div className={cn("flex rounded-lg border bg-muted p-0.5", embedded && "ml-auto")}>
           {periods.map((p) => (
             <button
               key={p.value}

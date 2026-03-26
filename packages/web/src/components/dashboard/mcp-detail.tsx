@@ -74,7 +74,7 @@ export function McpDetail() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/dashboard/mcps"
+            href="/standards/mcps"
             className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />

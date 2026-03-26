@@ -54,29 +54,31 @@ function KpiStat({
   );
 }
 
-export function ContextHealthDashboard() {
+export function ContextHealthDashboard({ embedded }: { embedded?: boolean } = {}) {
   const { currentWorkspace } = useWorkspaces();
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const { data, loading } = useContextHealth(currentWorkspace?.id, period);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className={cn("space-y-6", !embedded && "mx-auto max-w-7xl px-4 py-8 sm:px-6")}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/overview"
-            className="cursor-pointer rounded-md p-1 hover:bg-muted"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Context Health</h1>
-            <p className="text-sm text-muted-foreground">
-              Compaction rates and session length recommendations
-            </p>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/insights"
+              className="cursor-pointer rounded-md p-1 hover:bg-muted"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">Context Health</h1>
+              <p className="text-sm text-muted-foreground">
+                Compaction rates and session length recommendations
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex rounded-lg border bg-muted p-0.5">
           {periods.map((p) => (
             <button

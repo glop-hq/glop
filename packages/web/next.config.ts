@@ -7,10 +7,15 @@ const nextConfig: NextConfig = {
     return [
       // Specific routes before catch-all
       { source: "/dashboard/repos/:repoId", destination: "/repos/:repoId", permanent: false },
+      { source: "/dashboard/insights", destination: "/insights", permanent: false },
+      { source: "/dashboard/contributions", destination: "/insights", permanent: false },
+      { source: "/dashboard/context-health", destination: "/insights", permanent: false },
+      { source: "/dashboard/standards-usage", destination: "/standards", permanent: false },
+      { source: "/dashboard/mcps/:path*", destination: "/standards/mcps/:path*", permanent: false },
+      { source: "/dashboard", destination: "/overview", permanent: false },
       { source: "/live", destination: "/sessions", permanent: false },
       { source: "/history", destination: "/sessions", permanent: false },
-      { source: "/dashboard", destination: "/overview", permanent: false },
-      { source: "/skills", destination: "/repos", permanent: false },
+      { source: "/skills", destination: "/standards", permanent: false },
       { source: "/runs/:id", destination: "/sessions/:id", permanent: false },
     ];
   },

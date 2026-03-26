@@ -86,7 +86,7 @@ function ChartCard({
   );
 }
 
-export function AdoptionDashboard() {
+export function AdoptionDashboard({ embedded }: { embedded?: boolean } = {}) {
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const { currentWorkspace } = useWorkspaces();
   const { data, loading } = useDashboard(currentWorkspace?.id, period);
@@ -97,16 +97,18 @@ export function AdoptionDashboard() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className={cn("space-y-6", !embedded && "mx-auto max-w-7xl px-4 py-8 sm:px-6")}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Overview</h1>
-          <p className="text-sm text-muted-foreground">
-            AI coding adoption across your workspace
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
+        {!embedded && (
+          <div>
+            <h1 className="text-2xl font-bold">Adoption</h1>
+            <p className="text-sm text-muted-foreground">
+              AI coding adoption across your workspace
+            </p>
+          </div>
+        )}
+        <div className={cn("flex items-center gap-2", embedded && "ml-auto")}>
           <div className="flex rounded-lg border bg-muted p-0.5">
             {periods.map((p) => (
               <button
@@ -212,62 +214,15 @@ export function AdoptionDashboard() {
       </ChartCard>
 
       {/* Smart Suggestions & Coaching Tips */}
-      <div className="grid gap-6 lg:grid-cols-2">
-        <SuggestionsCard workspaceId={currentWorkspace?.id} />
-        <CoachingTipsCard workspaceId={currentWorkspace?.id} />
-      </div>
-
-      {/* Quick Links */}
-      <div className="grid gap-4 sm:grid-cols-5">
-        <Link
-          href="/dashboard/insights"
-          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
-        >
-          <p className="font-medium">Friction & Success Insights</p>
-          <p className="text-sm text-muted-foreground">
-            See where AI coding struggles and thrives
-          </p>
-        </Link>
-        <Link
-          href="/dashboard/contributions"
-          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
-        >
-          <p className="font-medium">AI Contributions</p>
-          <p className="text-sm text-muted-foreground">
-            Commits and PRs produced via Glop sessions
-          </p>
-        </Link>
-        <Link
-          href="/dashboard/context-health"
-          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
-        >
-          <p className="font-medium">Context Health</p>
-          <p className="text-sm text-muted-foreground">
-            Compaction rates and session length recommendations
-          </p>
-        </Link>
-        <Link
-          href="/dashboard/mcps"
-          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
-        >
-          <p className="font-medium">MCP Servers & Compliance</p>
-          <p className="text-sm text-muted-foreground">
-            Track MCP usage, approvals, and compliance posture
-          </p>
-        </Link>
-        <Link
-          href="/dashboard/standards-usage"
-          className="cursor-pointer rounded-lg border p-4 transition-colors hover:bg-muted"
-        >
-          <p className="font-medium">Standards Usage</p>
-          <p className="text-sm text-muted-foreground">
-            Track skill, command, and agent adoption and effectiveness
-          </p>
-        </Link>
-      </div>
+      {!embedded && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SuggestionsCard workspaceId={currentWorkspace?.id} />
+          <CoachingTipsCard workspaceId={currentWorkspace?.id} />
+        </div>
+      )}
 
       {/* Digest Settings */}
-      <DigestSettings />
+      {!embedded && <DigestSettings />}
     </div>
   );
 }

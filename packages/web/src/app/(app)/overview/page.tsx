@@ -1,5 +1,5 @@
-import { AdoptionDashboard } from "@/components/dashboard/adoption-dashboard";
+import { OverviewPage } from "@/components/overview-page";
 
-export default function OverviewPage() {
-  return <AdoptionDashboard />;
+export default function OverviewRoute() {
+  return <OverviewPage />;
 }

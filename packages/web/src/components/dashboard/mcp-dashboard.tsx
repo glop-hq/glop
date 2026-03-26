@@ -244,7 +244,7 @@ export function McpDashboard() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link
-            href="/overview"
+            href="/standards"
             className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -365,7 +365,7 @@ export function McpDashboard() {
                         onStatusChange={handleRefresh}
                         onClick={() =>
                           router.push(
-                            `/dashboard/mcps/${mcp.id}?workspace_id=${currentWorkspace?.id}`
+                            `/standards/mcps/${mcp.id}?workspace_id=${currentWorkspace?.id}`
                           )
                         }
                       />

@@ -181,7 +181,7 @@ function StandardsTable({
   );
 }
 
-export function StandardsUsageDashboard() {
+export function StandardsUsageDashboard({ embedded }: { embedded?: boolean } = {}) {
   const { currentWorkspace } = useWorkspaces();
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const { data, loading } = useStandardsUsage(currentWorkspace?.id, period);
@@ -215,24 +215,26 @@ export function StandardsUsageDashboard() {
     .slice(0, 5);
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className={cn("space-y-6", !embedded && "mx-auto max-w-7xl px-4 py-8 sm:px-6")}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/overview"
-            className="cursor-pointer rounded-md p-1 hover:bg-muted"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">Standards Usage</h1>
-            <p className="text-sm text-muted-foreground">
-              Track how skills, commands, and agents are used across your
-              workspace
-            </p>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/standards"
+              className="cursor-pointer rounded-md p-1 hover:bg-muted"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">Standards Usage</h1>
+              <p className="text-sm text-muted-foreground">
+                Track how skills, commands, and agents are used across your
+                workspace
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex rounded-lg border bg-muted p-0.5">
           {periods.map((p) => (
             <button

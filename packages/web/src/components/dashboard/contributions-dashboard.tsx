@@ -65,7 +65,7 @@ function KpiStat({
   );
 }
 
-export function ContributionsDashboard() {
+export function ContributionsDashboard({ embedded }: { embedded?: boolean } = {}) {
   const [period, setPeriod] = useState<AnalyticsPeriod>("30d");
   const { currentWorkspace } = useWorkspaces();
   const { data, loading } = useContributions(currentWorkspace?.id, period);
@@ -80,23 +80,25 @@ export function ContributionsDashboard() {
     }));
 
   return (
-    <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
+    <div className={cn("space-y-6", !embedded && "mx-auto max-w-7xl px-4 py-8 sm:px-6")}>
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link
-            href="/overview"
-            className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold">AI Contributions</h1>
-            <p className="text-sm text-muted-foreground">
-              Commits and PRs produced via Glop sessions
-            </p>
+        {!embedded && (
+          <div className="flex items-center gap-3">
+            <Link
+              href="/insights"
+              className="cursor-pointer rounded-md p-1 text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+            <div>
+              <h1 className="text-2xl font-bold">AI Contributions</h1>
+              <p className="text-sm text-muted-foreground">
+                Commits and PRs produced via Glop sessions
+              </p>
+            </div>
           </div>
-        </div>
+        )}
         <div className="flex rounded-lg border bg-muted p-0.5">
           {periods.map((p) => (
             <button
