@@ -8,6 +8,7 @@ const publicPaths = [
   "/api/v1/health",
   "/api/v1/repos",
   "/api/v1/facets",
+  "/api/v1/context-health",
   "/api/v1/shared",
   "/api/v1/join",
   "/api/auth",
